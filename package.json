@@ -19,6 +19,7 @@
     "check:llm": "node scripts/check-llm.js",
     "test:hooks": "node --test tests/hooks.test.js",
     "test:voice": "node --test tests/voice.test.js",
+    "test:llm": "node --test tests/llm.test.js",
     "dist": "electron-builder --win"
   },
   "keywords": [

@@ -40,14 +40,30 @@ function endpoint(id, cfg) {
 
 const headers = (key) => ({ 'content-type': 'application/json', ...(key && { authorization: `Bearer ${key}` }) });
 
+// Why a provider said no, as an Error with its HTTP status (Gemini wraps its error in a list).
 async function failure(res) {
   const body = await res.text().catch(() => '');
+  let message;
   try {
-    const err = JSON.parse(body).error;
-    return new Error(typeof err === 'string' ? err : err?.message || body);
+    const parsed = JSON.parse(body);
+    const err = (Array.isArray(parsed) ? parsed[0] : parsed)?.error;
+    message = typeof err === 'string' ? err : err?.message || body;
   } catch {
-    return new Error(body.slice(0, 200) || `answered ${res.status}`);
+    message = body.slice(0, 200) || `answered ${res.status}`;
   }
+  return Object.assign(new Error(message), { status: res.status });
+}
+
+// Models a provider lists that can't chat (embeddings, images, speech…): not offered to her chat
+const NOT_CHAT = /embed|imagen|veo|tts|whisper|transcribe|dall-e|moderation|\baqa\b|guard|image-generation|native-audio|-live-/i;
+
+// A model the provider says is gone ("no longer available", 404): the one it suggests instead if it
+// names one we have, else the next one on the list. null: nothing else to try.
+function replacement(err, model, list) {
+  if (err?.status !== 404 || !list?.length) return null;
+  const named = String(err.message).match(/models\/[\w.-]+|\b[\w-]+-\d[\w.-]*/g) || [];
+  const suggested = named.map((m) => m.replace(/[.,]$/, '')).find((m) => m !== model && list.includes(m));
+  return suggested || list.find((m) => m !== model) || null;
 }
 
 // The provider's models by name; null when it can't be reached (Ollama only), throws with why otherwise.
@@ -62,7 +78,7 @@ async function models(id, cfg) {
   if (!res.ok) throw await failure(res);
   const body = await res.json();
   const list = Array.isArray(body) ? body : body.data || body.models || [];
-  return list.map((m) => (typeof m === 'string' ? m : m.id || m.name)).filter(Boolean);
+  return list.map((m) => (typeof m === 'string' ? m : m.id || m.name)).filter((m) => m && !NOT_CHAT.test(m));
 }
 
 function warm(id, model) {
@@ -204,4 +220,4 @@ function isLocal(id, cfg) {
   return Boolean(PROVIDERS[id].local);
 }
 
-module.exports = { isLocal, PROVIDERS, CLAUDE_MODES, models, warm, chat, resetClaude, isChatSession, claudeMemory, restoreClaude };
+module.exports = { isLocal, PROVIDERS, CLAUDE_MODES, models, warm, chat, replacement, resetClaude, isChatSession, claudeMemory, restoreClaude };

@@ -537,7 +537,22 @@ function registerIpc() {
     try {
       const send = (text) => overlay?.webContents.send('chat:delta', { id, text });
       const cfg = config.load();
-      const text = await llm.chat(cfg.provider, llmConfig(cfg), { model: pickModel(), messages }, send, abort.signal);
+      const ask = (model) => llm.chat(cfg.provider, llmConfig(cfg), { model, messages }, send, abort.signal);
+      let model = pickModel();
+      let text;
+      try {
+        text = await ask(model);
+      } catch (err) {
+        // the provider retired that model (Gemini does, with a 404): she moves to the one it suggests,
+        // or the next one, keeps it for next time, and answers anyway
+        const next = !abort.signal.aborted && llm.replacement(err, model, chatModels);
+        if (!next) throw err;
+        console.error(`[capri] ${model} is gone (${err.message.slice(0, 120)}), switching to ${next}`);
+        chatModels = chatModels.filter((m) => m !== model);
+        model = next;
+        updateConfig({ chatModel: model });
+        text = await ask(model);
+      }
       if (cfg.provider === 'claude') saveMemory({ claude: llm.claudeMemory() });
       return { ok: true, text };
     } catch (err) {
