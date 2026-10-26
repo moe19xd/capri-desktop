@@ -17,7 +17,7 @@ async function rig(lang = 'en') {
   const { Listen } = await load('listen.js');
   const handled = [];
   const listen = new Listen({
-    capri: { stowed: false, wake() {}, perform() {}, towardCenter: () => 1 },
+    capri: { stowed: false, wake() {}, perform() {}, pulse() {}, towardCenter: () => 1 },
     panel: { say: () => true },
     host: { onVoiceEvent() {}, armEars() {} },
     brain: { lang },
@@ -70,6 +70,22 @@ test('not for her: ignored', async () => {
   listen.heard('the weather is nice today', false);
   listen.heard('come back later', false);
   assert.deepStrictEqual(handled, []);
+});
+
+test('her name recognizer fooled, no name in what was said: ignored, and she does not start listening', async () => {
+  const { listen, handled } = await rig();
+  listen.onEvent({ type: 'wake' });
+  listen.heard('the weather is nice today', true);
+  listen.heard('come back later', true, 'come back later');
+  listen.heard('what time is it', false); // not armed by any of that
+  assert.deepStrictEqual(handled, []);
+});
+
+test('her name a few words in, said right', async () => {
+  const { listen, handled } = await rig();
+  listen.heard('ok so capri open spotify', false);
+  listen.heard('open spotify capri', false); // too far in: not a call to her
+  assert.deepStrictEqual(handled, ['open spotify']);
 });
 
 test('Ctrl+Alt+V: the next sentence is for her, no name needed', async () => {

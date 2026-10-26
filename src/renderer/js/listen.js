@@ -11,7 +11,25 @@ import { voiceFor } from './voicelines.js';
 const ARMED_MS = 7000;  // after her name alone (or Ctrl+Alt+V), how long she waits for the rest
 const OWN_MAX_WORDS = 7; // her own commands are short; longer, it's for her chat
 // how her name comes out of the sentence recognizer when it mishears it
-const NAMEISH = /^(capri|capris|caprice|capree|copy|cap|kapri|capra|capri's|капри)$/;
+const NAMEISH = /^(capri|capris|caprice|capree|copy|cap|camp|kapri|capra|capri's|капри)$/;
+// her name, however a transcript spells it: taken on its own word
+const NAME = /^(capri|capris|capri's|caprice|capree|caprie|kapri|kaprie|капри)$/;
+const NAME_WITHIN = 3; // her name is one of the first words of what's said to her ("hey Capri, …", "ok so Capri …")
+
+// how many letters apart two words are (Levenshtein), to know "cap" or "capry" for her name
+function distance(a, b) {
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const keep = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = keep;
+    }
+  }
+  return row[b.length];
+}
 
 // lowercase, apostrophes and hyphens as spaces ("t'en" -> "t en"), no punctuation (Whisper writes
 // it, her other ears don't): what the commands match on
@@ -50,8 +68,8 @@ export class Listen {
           this.panel.say({ kind: 'info', badge: this.t.badge, line: this.t.ready, hold: 4500 });
         }
         break;
-      case 'wake':
-        this.arm();
+      case 'wake': // a hint, not a proof: her name recognizer takes lots of things for "Capri"
+        this.capri.pulse();
         break;
       case 'hearing': // Whisper is making out what you said
         this.capri.pulse();
@@ -96,19 +114,22 @@ export class Listen {
 
   // A sentence her ears made out. wake: her name was heard in it. alt: what her small model made
   // of it, when Whisper wrote `raw`: if only that one is one of her commands, it's the one.
+  //
+  // It's for her only if her name is in what was said (one of its first words), or right after
+  // she turned to you (her name alone, Ctrl+Alt+V). Her name recognizer saying "Capri" isn't
+  // enough on its own: it hears her name in all sorts of things.
   heard(raw, wake, alt = null) {
     const text = this.pick(plain(raw), plain(alt));
     if (!text) return;
     const armed = performance.now() < this.armedUntil;
-    const named = this.t.wake.test(text);
-    if (!armed && !wake && !named) return; // not for her
-    let rest = text.replace(this.t.wake, '').trim();
-    // her name heard by her name recognizer, misheard by the other ("cap", "camp"): its first word
-    // is her name, and alone it's just her name
-    if (!named && wake) {
-      const [first, ...others] = rest.split(' ');
-      if (!others.length || NAMEISH.test(first) || /^[ck]a[pbmf]/.test(first)) rest = others.join(' ');
-    }
+    // her name in the sentence; else in her small model's version of it
+    const at = this.nameAt(text, wake);
+    const altAt = at < 0 && alt ? this.nameAt(plain(alt), wake) : -1;
+    if (at < 0 && altAt < 0 && !armed) return; // not for her
+    let rest = text;
+    if (at >= 0) rest = text.split(' ').slice(at + 1).join(' ');
+    else if (altAt >= 0) rest = plain(alt).split(' ').slice(altAt + 1).join(' ');
+    rest = rest.trim();
     if (!rest) {
       this.arm(); // just her name: she waits for the rest
       return;
@@ -141,6 +162,13 @@ export class Listen {
     if (!chat.open) await chat.start();
     if (!chat.open) return undefined; // something more important is on screen (a permission prompt)
     return chat.send(text, { voice: true });
+  }
+
+  // Where her name is among the first words (-1: not there). Spelled right, or, when her name
+  // recognizer heard it too, close enough to it ("cap", "capry", "copy").
+  nameAt(text, wake) {
+    const words = text.split(' ').slice(0, NAME_WITHIN);
+    return words.findIndex((w) => NAME.test(w) || (wake && w.length >= 3 && (NAMEISH.test(w) || distance(w, 'capri') <= 2)));
   }
 
   pick(text, alt) {
