@@ -15,7 +15,9 @@ const ollama = require('./ollama');
 const WIN = process.platform === 'win32';
 
 // The models she offers for her chat, with what they weigh (as Ollama lists them)
+// (ram: only offered on a PC with at least that much memory)
 const MODELS = [
+  { name: 'gemma3:12b', bytes: 8.1e9, ram: 20 * 2 ** 30 }, // much sharper, for a PC with room for it
   { name: 'gemma3:4b', bytes: 3.3e9 }, // better in languages other than English
   { name: 'llama3.2', bytes: 2.0e9 },  // lighter
 ];

@@ -120,6 +120,11 @@ function pause(on) {
   control({ action: 'pause', on: Boolean(on) });
 }
 
+// she's waiting for what you say next: its sound is kept for Whisper even without her name in it
+function arm(ms) {
+  control({ action: 'arm', ms: Math.max(0, Math.min(Number(ms) || 0, 15000)) });
+}
+
 const listening = () => Boolean(win && !win.isDestroyed());
 const isEars = (contents) => Boolean(win && !win.isDestroyed() && contents === win.webContents);
 
@@ -131,4 +136,4 @@ function init() {
   });
 }
 
-module.exports = { MODELS, dir, status, download, start, stop, pause, listening, isEars, init };
+module.exports = { MODELS, dir, status, download, start, stop, pause, arm, listening, isEars, init };

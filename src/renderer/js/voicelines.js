@@ -15,7 +15,8 @@ export const VOICE = {
     modelHow: 'Supprime-le dans le dossier des voix (mon menu › Voix) et récupère-le à nouveau.',
     setup: {
       line: 'Tu veux me parler à voix haute ? Il me faut mes oreilles d’abord.',
-      quote: 'Un modèle de voix d’environ {size} Mo, téléchargé une fois. Il tourne sur ton PC : rien de ce que tu dis n’en sort.',
+      quote: 'Environ {size} Mo, téléchargés une fois : un petit modèle qui guette mon nom, et Whisper pour bien comprendre la suite. Tout tourne sur ton PC : rien de ce que tu dis n’en sort.',
+      light: 'Version légère ({size} Mo)', unpacking: 'Je déballe…',
       get: 'Le télécharger', no: 'Pas maintenant', cancel: 'Annuler',
       fetching: 'Je récupère mes oreilles…', progress: '{done} / {total} Mo',
       failed: 'Impossible de le récupérer : {error}',
@@ -65,7 +66,8 @@ export const VOICE = {
     modelHow: 'Delete it in the voice folder (my menu › Voice) and fetch it again.',
     setup: {
       line: 'Want to talk to me out loud? I need my ears first.',
-      quote: 'A voice model of about {size} MB, downloaded once. It runs on your PC: nothing you say leaves it.',
+      quote: 'About {size} MB, downloaded once: a small model that listens for my name, and Whisper to really make out the rest. It all runs on your PC: nothing you say leaves it.',
+      light: 'Light version ({size} MB)', unpacking: 'Unpacking…',
       get: 'Download it', no: 'Not now', cancel: 'Cancel',
       fetching: 'Fetching my ears…', progress: '{done} / {total} MB',
       failed: 'Couldn’t fetch it: {error}',
@@ -115,7 +117,8 @@ export const VOICE = {
     modelHow: 'Bórralo en la carpeta de voces (mi menú › Voz) y descárgalo otra vez.',
     setup: {
       line: '¿Quieres hablarme en voz alta? Primero necesito mis oídos.',
-      quote: 'Un modelo de voz de unos {size} MB, descargado una vez. Funciona en tu PC: nada de lo que dices sale de ahí.',
+      quote: 'Unos {size} MB, descargados una vez: un modelo pequeño que espera mi nombre, y Whisper para entender bien el resto. Todo funciona en tu PC: nada de lo que dices sale de ahí.',
+      light: 'Versión ligera ({size} MB)', unpacking: 'Desempaquetando…',
       get: 'Descargarlo', no: 'Ahora no', cancel: 'Cancelar',
       fetching: 'Recuperando mis oídos…', progress: '{done} / {total} MB',
       failed: 'No pude descargarlo: {error}',
@@ -165,7 +168,8 @@ export const VOICE = {
     modelHow: 'Apague ele na pasta de vozes (meu menu › Voz) e baixe de novo.',
     setup: {
       line: 'Quer falar comigo em voz alta? Primeiro preciso dos meus ouvidos.',
-      quote: 'Um modelo de voz de uns {size} MB, baixado uma vez. Roda no seu PC: nada do que você diz sai dele.',
+      quote: 'Uns {size} MB, baixados uma vez: um modelo pequeno que espera meu nome, e o Whisper pra entender direito o resto. Tudo roda no seu PC: nada do que você diz sai dele.',
+      light: 'Versão leve ({size} MB)', unpacking: 'Desempacotando…',
       get: 'Baixar', no: 'Agora não', cancel: 'Cancelar',
       fetching: 'Buscando meus ouvidos…', progress: '{done} / {total} MB',
       failed: 'Não consegui baixar: {error}',
@@ -215,7 +219,8 @@ export const VOICE = {
     modelHow: 'Удали её в папке голосов (моё меню › Голос) и скачай снова.',
     setup: {
       line: 'Хочешь говорить со мной вслух? Сначала мне нужны уши.',
-      quote: 'Голосовая модель примерно на {size} МБ, скачивается один раз. Работает на твоём ПК: ничего из сказанного не уходит наружу.',
+      quote: 'Около {size} МБ, один раз: маленькая модель ждёт моё имя, а Whisper как следует разбирает остальное. Всё работает на твоём ПК: ничего из сказанного не уходит наружу.',
+      light: 'Лёгкая версия ({size} МБ)', unpacking: 'Распаковываю…',
       get: 'Скачать', no: 'Не сейчас', cancel: 'Отмена',
       fetching: 'Достаю свои уши…', progress: '{done} / {total} МБ',
       failed: 'Не получилось скачать: {error}',

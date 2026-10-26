@@ -13,8 +13,13 @@ const OWN_MAX_WORDS = 7; // her own commands are short; longer, it's for her cha
 // how her name comes out of the sentence recognizer when it mishears it
 const NAMEISH = /^(capri|capris|caprice|capree|copy|cap|kapri|capra|capri's|капри)$/;
 
-// apostrophes and hyphens as spaces ("t'en" -> "t en"): what the commands match on
-const plain = (text) => String(text || '').toLowerCase().replace(/['’-]+/g, ' ').replace(/\s+/g, ' ').trim();
+// lowercase, apostrophes and hyphens as spaces ("t'en" -> "t en"), no punctuation (Whisper writes
+// it, her other ears don't): what the commands match on
+const plain = (text) => String(text || '').toLowerCase()
+  .replace(/['’-]+/g, ' ')
+  .replace(/[.,!?;:"“”«»()…¿¡]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
 
 export class Listen {
   constructor({ capri, panel, host, brain, chat, speaker }) {
@@ -48,8 +53,11 @@ export class Listen {
       case 'wake':
         this.arm();
         break;
+      case 'hearing': // Whisper is making out what you said
+        this.capri.pulse();
+        break;
       case 'final':
-        this.heard(msg.text, msg.wake);
+        this.heard(msg.text, msg.wake, msg.alt);
         break;
       case 'error':
         this.on = false;
@@ -72,6 +80,7 @@ export class Listen {
     const { capri } = this;
     const fresh = performance.now() > this.armedUntil;
     this.armedUntil = performance.now() + ARMED_MS;
+    this.host.armEars(ARMED_MS); // what you say next is kept for Whisper too
     if (!fresh) return;
     if (capri.stowed) return; // in her chip she still hears you, she just doesn't come out for "Capri" alone
     capri.wake();
@@ -85,9 +94,10 @@ export class Listen {
     this.arm();
   }
 
-  // A sentence her ears made out. wake: her name was heard in it.
-  heard(raw, wake) {
-    const text = plain(raw);
+  // A sentence her ears made out. wake: her name was heard in it. alt: what her small model made
+  // of it, when Whisper wrote `raw`: if only that one is one of her commands, it's the one.
+  heard(raw, wake, alt = null) {
+    const text = this.pick(plain(raw), plain(alt));
     if (!text) return;
     const armed = performance.now() < this.armedUntil;
     const named = this.t.wake.test(text);
@@ -104,6 +114,7 @@ export class Listen {
       return;
     }
     this.armedUntil = 0;
+    this.host.armEars(0);
     this.handle(rest);
   }
 
@@ -130,6 +141,12 @@ export class Listen {
     if (!chat.open) await chat.start();
     if (!chat.open) return undefined; // something more important is on screen (a permission prompt)
     return chat.send(text, { voice: true });
+  }
+
+  pick(text, alt) {
+    if (!alt || !text) return text || alt;
+    const strip = (t) => t.replace(this.t.wake, '').trim().split(' ').filter((w, i) => i > 0 || !NAMEISH.test(w)).join(' ');
+    return !this.own(strip(text)) && this.own(strip(alt)) ? alt : text;
   }
 
   // One of her own commands, if it's that: its name
@@ -229,26 +246,33 @@ export class Listen {
     const { panel, host } = this;
     const s = this.t.setup;
     const state = await host.voiceStatus();
-    if (state.installed) {
-      host.setConfig({ listen: true });
+    if (state.installed && state.whisper) {
+      host.setConfig({ listen: true, whisper: true });
       return;
     }
     if (this.fetching) return;
     const mb = (n) => Math.round(n / 1e6);
+    const ears = state.installed ? 0 : state.expected;
+    const whole = ears + (state.whisper ? 0 : state.whisperSize);
     panel.say({
       kind: 'info',
       face: 'look',
       guide: true,
       badge: this.t.badge,
       line: s.line,
-      quote: fmt(s.quote, { size: mb(state.expected) }),
-      actions: [{ id: 'get', label: s.get, primary: true }, { id: 'no', label: s.no }],
-      onAction: (id) => (id === 'get' ? this.fetch() : panel.hide()),
+      quote: fmt(s.quote, { size: mb(whole) }),
+      actions: [
+        { id: 'get', label: s.get, primary: true },
+        // just the small model: quicker to fetch, hears less well
+        ...(ears ? [{ id: 'light', label: fmt(s.light, { size: mb(ears) }) }] : []),
+        { id: 'no', label: s.no },
+      ],
+      onAction: (id) => (id === 'no' ? panel.hide() : this.fetch({ light: id === 'light' })),
       hold: null,
     });
   }
 
-  async fetch() {
+  async fetch({ light = false } = {}) {
     const { panel, host } = this;
     const s = this.t.setup;
     this.fetching = true;
@@ -263,11 +287,11 @@ export class Listen {
       onAction: () => host.cancelVoice(),
       hold: null,
     });
-    const off = host.onVoiceProgress(({ done, total }) => {
+    const off = host.onVoiceProgress(({ done, total, unpacking }) => {
       panel.setProgress(total ? done / total : 0);
-      panel.setQuote(fmt(s.progress, { done: Math.round(done / 1e6), total: Math.round(total / 1e6) }));
+      panel.setQuote(unpacking ? s.unpacking : fmt(s.progress, { done: Math.round(done / 1e6), total: Math.round(total / 1e6) }));
     });
-    const res = await host.getVoice();
+    const res = await host.getVoice({ light });
     off();
     this.fetching = false;
     if (res.ok) {

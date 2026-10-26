@@ -8,7 +8,8 @@
 //   { type: 'ready' }                    listening
 //   { type: 'wake' }                     her name, just now, in what you're saying
 //   { type: 'partial', text }            what you're saying, so far
-//   { type: 'final', text, wake }        what you said (wake: her name was in it)
+//   { type: 'final', text, wake, audio } what you said (wake: her name was in it); audio: the sound
+//                                        of it (16 kHz) when it's for her, for Whisper (main/whisper.js)
 //   { type: 'error', error }
 
 const link = window.ears;
@@ -20,6 +21,33 @@ let audio = null;   // { ctx, stream, node }
 let paused = false; // while she talks: she'd hear herself
 let wakeHeard = false;
 let wakeWords = [];
+let armedUntil = 0; // she's waiting for what you say next (her name alone, Ctrl+Alt+V): keep its sound
+// the sound of what's being said since the last sentence ended, a little before it too
+const RATE = 16000;
+const PRE_ROLL = RATE * 0.6;
+const MAX_UTTERANCE = RATE * 20;
+let chunks = [];
+let held = 0;
+
+function keep(samples) {
+  chunks.push(samples);
+  held += samples.length;
+  while (held - chunks[0].length > MAX_UTTERANCE) held -= chunks.shift().length;
+}
+
+// what was kept, as one buffer; the next sentence starts from the last bit of it
+function take() {
+  const all = new Float32Array(held);
+  let at = 0;
+  for (const c of chunks) {
+    all.set(c, at);
+    at += c.length;
+  }
+  const tail = all.slice(Math.max(0, all.length - PRE_ROLL));
+  chunks = [tail];
+  held = tail.length;
+  return all;
+}
 
 const mentions = (text) => wakeWords.some((w) => ` ${text} `.includes(` ${w} `));
 
@@ -45,7 +73,7 @@ async function start({ modelUrl, words }) {
     return;
   }
   // 16 kHz is what the model works at: less to send it, nothing lost
-  const ctx = new AudioContext({ sampleRate: 16000 });
+  const ctx = new AudioContext({ sampleRate: RATE });
   full = new model.KaldiRecognizer(ctx.sampleRate);
   wake = new model.KaldiRecognizer(ctx.sampleRate, JSON.stringify([...words, '[unk]']));
 
@@ -70,7 +98,11 @@ async function start({ modelUrl, words }) {
     setTimeout(() => {
       const heard = wakeHeard || mentions(text);
       wakeHeard = false;
-      if (text) link.emit({ type: 'final', text, wake: heard });
+      const audio = take();
+      if (!text) return;
+      // the sound goes along only when it's for her: anything else is dropped right here
+      const forHer = heard || Date.now() < armedUntil;
+      link.emit({ type: 'final', text, wake: heard, ...(forHer && { audio }) });
     }, 250);
   });
 
@@ -78,6 +110,7 @@ async function start({ modelUrl, words }) {
   const node = ctx.createScriptProcessor(4096, 1, 1);
   node.onaudioprocess = (e) => {
     if (paused) return;
+    keep(e.inputBuffer.getChannelData(0).slice());
     try {
       full.acceptWaveform(e.inputBuffer);
       wake.acceptWaveform(e.inputBuffer);
@@ -105,17 +138,22 @@ function stop() {
   model?.terminate();
   model = full = wake = null;
   wakeHeard = false;
+  chunks = [];
+  held = 0;
 }
 
 link.onControl((msg) => {
   if (msg.action === 'start') start(msg);
   else if (msg.action === 'stop') stop();
+  else if (msg.action === 'arm') armedUntil = Date.now() + (msg.ms || 0);
   else if (msg.action === 'pause') {
     paused = Boolean(msg.on);
     // what was half heard before she spoke doesn't run into what comes after
     if (paused) {
       full?.retrieveFinalResult();
       wakeHeard = false;
+      chunks = [];
+      held = 0;
     }
   }
 });

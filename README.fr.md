@@ -172,9 +172,12 @@ Rien d'autre : elle ne voit ni ton écran ni tes fichiers.
 
 ### Lui parler à voix haute
 
-Son menu › **Voix** › **M’écouter** : la première fois, elle propose de récupérer ses oreilles, un modèle de voix
-d’environ 45 Mo pour sa langue ([Vosk](https://alphacephei.com/vosk/), Apache 2.0). Il tourne sur ton PC : rien de
-ce que tu dis n’en sort, et rien à payer.
+Son menu › **Voix** › **M’écouter** : la première fois, elle propose de récupérer ses oreilles, environ 250 Mo, une
+fois : un petit modèle qui guette son nom ([Vosk](https://alphacephei.com/vosk/), Apache 2.0, environ 45 Mo pour sa
+langue), et [Whisper](https://github.com/openai/whisper) base (MIT, via [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)),
+qui comprend bien mieux ce que tu lui dis. Tout tourne sur ton PC : rien de ce que tu dis n’en sort, et rien à payer.
+**Version légère** ne récupère que le petit modèle (elle entend moins bien) ; **Meilleure écoute (Whisper)** dans son
+menu Voix ajoute Whisper plus tard. Seul ce que tu lui dis passe par Whisper : le reste est jeté dès qu’il est entendu.
 
 - **« Capri, … »** : dis son nom, puis ce que tu veux, d’une traite ou après qu’elle s’est tournée vers toi (« J’écoute. »).
   Ce qui est dit sans son nom ne la regarde pas : elle ne le garde pas et ne l’envoie nulle part.

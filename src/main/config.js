@@ -31,6 +31,7 @@ const DEFAULTS = {
   motion: 'auto',    // her animations: 'auto' (like Windows' animation effects), 'full' or 'reduced'
   motionAsked: false, // she asked once, Windows' animations being off, whether to move anyway
   listen: false,     // her ears: she listens for "Capri, …" (offline, ears.js); off until you turn it on
+  whisper: true,     // her better hearing: Whisper makes out what you said to her, once it's fetched (whisper.js)
   speak: true,       // she answers out loud what you asked her by voice (Windows' own voices)
   speakAll: false,   // she reads all her lines out loud, not just her answers to you
   voiceName: '',     // the Windows voice she talks with ('' : she picks one for her language)

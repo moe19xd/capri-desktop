@@ -57,9 +57,10 @@ contextBridge.exposeInMainWorld('host', {
   openSite: (address) => ipcRenderer.invoke('apps:site', address),
   focusOverlay: (on) => ipcRenderer.send('overlay:focus', Boolean(on)),
   voiceStatus: () => ipcRenderer.invoke('voice:status'),
-  getVoice: () => ipcRenderer.invoke('voice:get'),
+  getVoice: (opts) => ipcRenderer.invoke('voice:get', { light: Boolean(opts?.light) }),
   cancelVoice: () => ipcRenderer.send('voice:cancel'),
   pauseEars: (on) => ipcRenderer.send('voice:pause', Boolean(on)),
+  armEars: (ms) => ipcRenderer.send('voice:arm', Number(ms) || 0),
   onVoiceEvent: on('voice:event'),
   onVoiceProgress: on('voice:progress'),
 });

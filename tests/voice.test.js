@@ -19,7 +19,7 @@ async function rig(lang = 'en') {
   const listen = new Listen({
     capri: { stowed: false, wake() {}, perform() {}, towardCenter: () => 1 },
     panel: { say: () => true },
-    host: { onVoiceEvent() {} },
+    host: { onVoiceEvent() {}, armEars() {} },
     brain: { lang },
     chat: { open: false },
     speaker: {},
@@ -33,6 +33,21 @@ test('her name and a command in one breath', async () => {
   listen.heard('capri open spotify', true);
   listen.heard('hey capri, what time is it', false); // her name made out by the sentence recognizer alone
   assert.deepStrictEqual(handled, ['open spotify', 'what time is it']);
+});
+
+test('what Whisper writes: capitals and punctuation', async () => {
+  const { listen, handled } = await rig();
+  listen.heard('Capri, open Spotify.', true);
+  listen.heard('Hey Capri! What time is it?', true);
+  listen.heard('Cap, teleport', true);
+  assert.deepStrictEqual(handled, ['open spotify', 'what time is it', 'teleport']);
+});
+
+test('Whisper misheard a command her small model got: the command wins', async () => {
+  const { listen, handled } = await rig();
+  listen.heard('Cap, teleboard', true, 'cap teleport');
+  listen.heard('Cap, tell me about night city', true, 'cap tell me about my city');
+  assert.deepStrictEqual(handled, ['teleport', 'tell me about night city']);
 });
 
 test('her name misheard by the sentence recognizer, caught by the name one', async () => {

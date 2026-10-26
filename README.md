@@ -162,9 +162,12 @@ Nothing else: she can't see your screen or your files.
 
 ### Talk to her out loud
 
-Her menu › **Voice** › **Listen to me**: the first time, she offers to fetch her ears, a voice model of about 40 MB
-for her language ([Vosk](https://alphacephei.com/vosk/), Apache 2.0). It runs on your PC: nothing you say leaves it,
-and there's nothing to pay.
+Her menu › **Voice** › **Listen to me**: the first time, she offers to fetch her ears, about 250 MB, once: a small
+model that listens for her name ([Vosk](https://alphacephei.com/vosk/), Apache 2.0, about 40 MB for her language), and
+[Whisper](https://github.com/openai/whisper) base (MIT, through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)),
+which makes out what you say to her far better. It all runs on your PC: nothing you say leaves it, and there's nothing
+to pay. **Light version** fetches only the small model (it mishears more); **Better hearing (Whisper)** in her Voice
+menu adds Whisper later. Only what you say to her goes through Whisper: the rest is dropped as soon as it's heard.
 
 - **"Capri, …"**: say her name, then what you want, in one breath or after she turns to you ("Listening.").
   Anything said without her name is none of her business: she doesn't keep it or send it anywhere.

@@ -18,6 +18,7 @@ const setup = require('./setup');
 const apps = require('./apps');
 const launch = require('./launch');
 const ears = require('./ears');
+const whisper = require('./whisper');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
 const activeHooks = () => activeAssistant().hooks;
@@ -242,7 +243,7 @@ function rendererConfig() {
 function updateConfig(patch) {
   config.save(patch);
   if ('rest' in patch) fitOverlay(); // the taskbar in her window or not
-  if ('listen' in patch || 'lang' in patch) applyVoice();
+  if ('listen' in patch || 'lang' in patch || 'whisper' in patch) applyVoice();
   const cfg = rendererConfig();
   overlay?.webContents.send('capri:config', cfg);
   rebuildTray();
@@ -305,6 +306,15 @@ function rebuildTray() {
             : updateConfig({ listen: item.checked })),
         },
         { label: t.voicePtt, accelerator: 'Ctrl+Alt+V', enabled: cfg.listen, click: () => sendCommand('voicePtt') },
+        {
+          label: t.voiceWhisper,
+          type: 'checkbox',
+          checked: cfg.whisper !== false && whisper.status().installed,
+          // not fetched yet: she asks first (a bigger download)
+          click: (item) => (item.checked && !whisper.status().installed
+            ? (rebuildTray(), sendCommand('voiceSetup'))
+            : updateConfig({ whisper: item.checked })),
+        },
         { type: 'separator' },
         { label: t.voiceAnswer, type: 'checkbox', checked: cfg.speak, click: (item) => updateConfig({ speak: item.checked }) },
         { label: t.voiceAll, type: 'checkbox', checked: cfg.speakAll, click: (item) => updateConfig({ speakAll: item.checked }) },
@@ -474,20 +484,40 @@ async function pickClaudeFolder() {
 }
 
 // Her ears (ears.js): on while "Listen" is ticked and her voice model for this language is here.
-// What they hear goes to the overlay (listen.js), which decides what to do with it.
+// What they hear goes to the overlay (listen.js), which decides what to do with it; a sentence
+// for her goes through Whisper first, if she has it (whisper.js), which hears it much better.
 let voiceFetch = null; // AbortController of a model download
+const useWhisper = (cfg = config.load()) => cfg.whisper !== false && whisper.status().installed;
+
+async function heard(msg, lang) {
+  const { audio, ...rest } = msg;
+  if (!audio || !useWhisper()) return rest;
+  overlay?.webContents.send('voice:event', { type: 'hearing' });
+  const samples = audio instanceof Float32Array ? audio : new Float32Array(Object.values(audio));
+  const text = await whisper.transcribe(samples, lang).catch((err) => {
+    console.error('[capri] Whisper:', err.message);
+    return null;
+  });
+  if (DEV) console.log('[voice] whisper:', JSON.stringify(text), 'vosk:', JSON.stringify(rest.text));
+  // her other ears' version goes along: on a short command it's sometimes the one that got it
+  return text ? { ...rest, text, alt: rest.text } : rest;
+}
+
 function applyVoice() {
   const cfg = config.load();
   const lang = resolveLang(cfg.lang);
   if (cfg.listen && ears.status(lang).installed) {
-    ears.start(lang, (msg) => {
-      if (DEV && msg.type !== 'partial') console.log('[voice]', JSON.stringify(msg));
+    ears.start(lang, async (msg) => {
+      if (DEV && msg.type !== 'partial') console.log('[voice]', JSON.stringify({ ...msg, audio: msg.audio && `${msg.audio.length ?? '?'} samples` }));
       // no microphone, or a model that won't load: her ears close, and she says why
       if (msg.type === 'error') ears.stop();
-      overlay?.webContents.send('voice:event', msg);
+      const out = msg.type === 'final' ? await heard(msg, lang) : msg;
+      overlay?.webContents.send('voice:event', out);
     }, { dev: DEV });
+    if (useWhisper(cfg)) whisper.warm(lang);
   } else {
     ears.stop();
+    whisper.unload();
   }
 }
 
@@ -661,20 +691,35 @@ function registerIpc() {
   // ears, and keeping quiet while she talks herself
   ipcMain.handle('voice:status', () => {
     const cfg = config.load();
-    return { ...ears.status(resolveLang(cfg.lang)), listen: cfg.listen, listening: ears.listening() };
+    const w = whisper.status();
+    return {
+      ...ears.status(resolveLang(cfg.lang)),
+      whisper: w.installed, whisperSize: w.expected, whisperOn: cfg.whisper !== false,
+      listen: cfg.listen, listening: ears.listening(),
+    };
   });
-  ipcMain.handle('voice:get', async () => {
+  // fetches what's missing: her ears' model for her language, and Whisper unless `light`
+  ipcMain.handle('voice:get', async (_e, { light = false } = {}) => {
     const lang = resolveLang(config.load().lang);
     voiceFetch?.abort();
     voiceFetch = new AbortController();
+    const parts = [
+      ...(ears.status(lang).installed ? [] : [{ id: 'ears', size: ears.status(lang).expected, get: (p, s) => ears.download(lang, p, s) }]),
+      ...(light || whisper.status().installed ? [] : [{ id: 'whisper', size: whisper.status().expected, get: (p, s) => whisper.download(p, s) }]),
+    ];
+    const total = parts.reduce((n, p) => n + p.size, 0);
+    let before = 0;
     let last = 0;
     try {
-      await ears.download(lang, ({ done, total }) => {
-        if (Date.now() - last < 150) return;
-        last = Date.now();
-        overlay?.webContents.send('voice:progress', { done, total });
-      }, voiceFetch.signal);
-      updateConfig({ listen: true });
+      for (const part of parts) {
+        await part.get(({ done, unpacking }) => {
+          if (!unpacking && Date.now() - last < 150) return;
+          last = Date.now();
+          overlay?.webContents.send('voice:progress', { done: before + done, total, unpacking: Boolean(unpacking) });
+        }, voiceFetch.signal);
+        before += part.size;
+      }
+      updateConfig({ listen: true, ...(!light && { whisper: true }) });
       return { ok: true };
     } catch (err) {
       return { ok: false, error: voiceFetch?.signal.aborted ? 'cancelled' : err.message };
@@ -684,6 +729,7 @@ function registerIpc() {
   });
   ipcMain.on('voice:cancel', () => voiceFetch?.abort());
   ipcMain.on('voice:pause', (_e, on) => ears.pause(on));
+  ipcMain.on('voice:arm', (_e, ms) => ears.arm(ms));
   ipcMain.handle('sounds:list', () => {
     try {
       return fs.readdirSync(userSoundsDir())
@@ -811,6 +857,7 @@ function main() {
     });
     session.defaultSession.setPermissionCheckHandler((contents, permission) => (permission === 'media' ? ears.isEars(contents) : true));
     ears.init();
+    whisper.init(ears.dir());
     setTimeout(applyVoice, 4000); // after her intro: loading the model takes the CPU a moment
     llm.restoreClaude(readMemory().claude);
     refreshModels(); // for her menu's model list
