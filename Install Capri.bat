@@ -37,6 +37,19 @@ if errorlevel 1 (
   exit /b 1
 )
 
+rem Electron's own download can fail silently inside npm install: make sure it's really there
+if not exist node_modules\electron\dist\electron.exe (
+  echo       Electron didn't come down with the rest: fetching it again...
+  call node node_modules\electron\install.js
+  if not exist node_modules\electron\dist\electron.exe (
+    echo.
+    echo   Couldn't fetch Electron. Check your internet connection, or your antivirus
+    echo   ^(it sometimes blocks electron.exe^), then run this file again.
+    pause
+    exit /b 1
+  )
+)
+
 rem 3. A desktop shortcut that starts her
 echo [3/3] Adding a "Capri" shortcut on your desktop...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
