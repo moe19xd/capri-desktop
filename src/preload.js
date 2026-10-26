@@ -61,6 +61,9 @@ contextBridge.exposeInMainWorld('host', {
   cancelVoice: () => ipcRenderer.send('voice:cancel'),
   pauseEars: (on) => ipcRenderer.send('voice:pause', Boolean(on)),
   armEars: (ms) => ipcRenderer.send('voice:arm', Number(ms) || 0),
+  ttsSay: (text, speed) => ipcRenderer.invoke('tts:say', { text, speed }),
+  ttsGet: (id) => ipcRenderer.invoke('tts:get', id),
+  ttsSize: (id) => ipcRenderer.invoke('tts:size', id),
   onVoiceEvent: on('voice:event'),
   onVoiceProgress: on('voice:progress'),
 });

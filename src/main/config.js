@@ -35,6 +35,10 @@ const DEFAULTS = {
   speak: true,       // she answers out loud what you asked her by voice (Windows' own voices)
   speakAll: false,   // she reads all her lines out loud, not just her answers to you
   voiceName: '',     // the Windows voice she talks with ('' : she picks one for her language)
+  ttsVoice: '',      // her natural voice (tts.js), by id ('' : the first one fetched for her language)
+  voiceEngine: 'auto', // 'auto': her natural voice when she has one, else Windows'; 'windows': Windows' always
+  voicePitch: 'higher', // construct.js PITCHES: natural, higher, highest
+  voiceGlitch: 'light', // construct.js LEVELS: off, light, strong (her glitches and echo)
 };
 
 let cache = null;

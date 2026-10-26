@@ -178,8 +178,11 @@ menu adds Whisper later. Only what you say to her goes through Whisper: the rest
   "look at the satellite", "what's Claude doing?", "mission report", "what time is it?", "be quiet",
   "stop listening". And what her chat does right away too: "open Spotify", "pause", "next", "louder",
   "put Daft Punk on Spotify", "call me Max".
-- **Anything else** goes to her chat (see "Talk to her" above), and she **answers out loud** with one of Windows' own
-  voices. Her menu › Voice › **Answer out loud** turns that off; **Read all her lines out loud** turns it up.
+- **Anything else** goes to her chat (see "Talk to her" above), and she **answers out loud**.
+- **Her voice**: Voice › *Her voice* fetches a natural voice (Piper, about 67 MB, offline: Cori, Jenny or Alba from
+  the UK, Amy or HFC from the US; Siwis in French, Daniela in Spanish, Irina in Russian), made into a construct's:
+  pitched up, with glitches and a digital echo (Voice › *Pitch* and *Glitches*, *Test her voice*). Without one, or with
+  *Windows voice* picked, she uses Windows' own. It's not the actress's voice, and won't be: that's hers. Her menu › Voice › **Answer out loud** turns that off; **Read all her lines out loud** turns it up.
 - While she talks she doesn't listen (she'd hear herself), and Windows shows its microphone icon while her ears are on.
 - No microphone? Windows Settings › Privacy › Microphone: let desktop apps use it.
 

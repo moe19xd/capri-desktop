@@ -19,6 +19,7 @@ const apps = require('./apps');
 const launch = require('./launch');
 const ears = require('./ears');
 const whisper = require('./whisper');
+const tts = require('./tts');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
 const activeHooks = () => activeAssistant().hooks;
@@ -315,6 +316,40 @@ function rebuildTray() {
             ? (rebuildTray(), sendCommand('voiceSetup'))
             : updateConfig({ whisper: item.checked })),
         },
+        { type: 'separator' },
+        {
+          label: t.voiceWho,
+          submenu: [
+            ...tts.list(resolveLang(cfg.lang)).map((v) => ({
+              label: v.installed ? v.label : `${v.label} — ${t.voiceFetch} ${Math.round(v.size / 1e6)} MB`,
+              type: 'radio',
+              checked: cfg.voiceEngine !== 'windows' && tts.current(resolveLang(cfg.lang), cfg.ttsVoice)?.id === v.id,
+              click: () => (v.installed
+                ? (updateConfig({ ttsVoice: v.id, voiceEngine: 'auto' }), sendCommand('voiceTest'))
+                : (rebuildTray(), sendCommand('ttsGet', { id: v.id }))),
+            })),
+            { type: 'separator' },
+            {
+              label: t.voiceWindows,
+              type: 'radio',
+              checked: cfg.voiceEngine === 'windows' || !tts.current(resolveLang(cfg.lang), cfg.ttsVoice),
+              click: () => { updateConfig({ voiceEngine: 'windows' }); sendCommand('voiceTest'); },
+            },
+          ],
+        },
+        {
+          label: t.voicePitch,
+          submenu: [['natural', t.voicePitchNatural], ['higher', t.voicePitchHigher], ['highest', t.voicePitchHighest]].map(([voicePitch, label]) => ({
+            label, type: 'radio', checked: cfg.voicePitch === voicePitch, click: () => { updateConfig({ voicePitch }); sendCommand('voiceTest'); },
+          })),
+        },
+        {
+          label: t.voiceGlitch,
+          submenu: [['off', t.voiceGlitchOff], ['light', t.voiceGlitchLight], ['strong', t.voiceGlitchStrong]].map(([voiceGlitch, label]) => ({
+            label, type: 'radio', checked: cfg.voiceGlitch === voiceGlitch, click: () => { updateConfig({ voiceGlitch }); sendCommand('voiceTest'); },
+          })),
+        },
+        { label: t.voiceTest, click: () => sendCommand('voiceTest') },
         { type: 'separator' },
         { label: t.voiceAnswer, type: 'checkbox', checked: cfg.speak, click: (item) => updateConfig({ speak: item.checked }) },
         { label: t.voiceAll, type: 'checkbox', checked: cfg.speakAll, click: (item) => updateConfig({ speakAll: item.checked }) },
@@ -728,6 +763,42 @@ function registerIpc() {
     }
   });
   ipcMain.on('voice:cancel', () => voiceFetch?.abort());
+  // her natural voice: which one, her line in it, and fetching one
+  ipcMain.handle('tts:say', async (_e, { text, speed }) => {
+    const cfg = config.load();
+    const voice = cfg.voiceEngine !== 'windows' && tts.current(resolveLang(cfg.lang), cfg.ttsVoice);
+    if (!voice || typeof text !== 'string' || !text.trim()) return null;
+    const t0 = Date.now();
+    return tts.say(voice.id, text.slice(0, 1200), Math.max(0.5, Math.min(Number(speed) || 1, 2)))
+      .then((audio) => {
+        if (DEV) console.log(`[voice] said in ${voice.id}: ${(audio.samples.length / audio.sampleRate).toFixed(1)} s of speech in ${Date.now() - t0} ms`);
+        return audio;
+      })
+      .catch((err) => {
+        console.error('[capri] her voice:', err.message);
+        return null;
+      });
+  });
+  ipcMain.handle('tts:get', async (_e, id) => {
+    voiceFetch?.abort();
+    voiceFetch = new AbortController();
+    let last = 0;
+    try {
+      await tts.download(id, ({ done, total, unpacking }) => {
+        if (!unpacking && Date.now() - last < 150) return;
+        last = Date.now();
+        overlay?.webContents.send('voice:progress', { done, total, unpacking: Boolean(unpacking) });
+      }, voiceFetch.signal);
+      updateConfig({ ttsVoice: id, voiceEngine: 'auto' });
+      tts.warm(id);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: voiceFetch?.signal.aborted ? 'cancelled' : err.message };
+    } finally {
+      voiceFetch = null;
+    }
+  });
+  ipcMain.handle('tts:size', (_e, id) => tts.list().find((v) => v.id === id)?.size || 0);
   ipcMain.on('voice:pause', (_e, on) => ears.pause(on));
   ipcMain.on('voice:arm', (_e, ms) => ears.arm(ms));
   ipcMain.handle('sounds:list', () => {
@@ -858,6 +929,12 @@ function main() {
     session.defaultSession.setPermissionCheckHandler((contents, permission) => (permission === 'media' ? ears.isEars(contents) : true));
     ears.init();
     whisper.init(ears.dir());
+    tts.init(ears.dir());
+    // her voice loaded ahead of her first line (a second or two)
+    setTimeout(() => {
+      const cfg = config.load();
+      if (cfg.voiceEngine !== 'windows') tts.warm(tts.current(resolveLang(cfg.lang), cfg.ttsVoice)?.id);
+    }, 6000);
     setTimeout(applyVoice, 4000); // after her intro: loading the model takes the CPU a moment
     llm.restoreClaude(readMemory().claude);
     refreshModels(); // for her menu's model list

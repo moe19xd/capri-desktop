@@ -1,10 +1,15 @@
-// Her voice out loud: Windows' own voices (speech synthesis, offline, free), a little higher and
-// quicker than they come. While she talks her ears are paused (she'd hear herself) and her mouth
-// moves (her 'talk' act).
+// Her voice out loud: her natural voice (main/tts.js, offline) made into a construct's
+// (construct.js), or, without one, Windows' own voices, a little higher and quicker than they come.
+// While she talks her ears are paused (she'd hear herself) and her mouth moves (her 'talk' act).
+
+import { construct, speedFor, seedFor, LEVELS, PITCHES } from './construct.js';
 
 // voices that suit her, by name, in the order she prefers them
 const PREFERRED = /aria|jenny|zira|hazel|susan|sonia|libby|natasha|denise|hortense|julie|elvira|helena|laura|sabina|francisca|maria|irina|svetlana|dariya|ekaterina|female/i;
 const MAX_CHARS = 420; // past that, the panel has the rest
+// words her natural voice says wrong, spelled the way it gets them right
+const PRONOUNCE = [[/\bchoom(s?)\b/gi, 'choomm$1'], [/\bnetrunner/gi, 'net runner'], [/\bpreem\b/gi, 'preemm']];
+const pronounced = (text) => PRONOUNCE.reduce((t, [re, to]) => t.replace(re, to), text);
 const TALK_EVERY_MS = 650;
 
 // What's worth saying of a reply: no code, no links, no markdown, cut at a sentence.
@@ -37,9 +42,16 @@ export class Speaker {
     this.muted = false;
     this.volume = 0.8;
     this.voiceName = '';
-    this.talking = 0; // interval of her mouth moving
+    this.engine = 'auto';
+    this.pitch = 'higher';
+    this.glitch = 'light';
+    this.talking = 0;  // interval of her mouth moving
     this.resumeTimer = 0;
-    this.queue = 0;   // utterances not finished yet
+    this.queue = 0;    // lines not finished yet
+    this.chain = Promise.resolve(); // her lines, one after the other
+    this.gen = 0;      // bumped by stop(): lines queued before it are dropped
+    this.ctx = null;
+    this.source = null; // what's playing of her natural voice
     this.synth?.getVoices(); // Chromium fills the list on its first call
   }
 
@@ -50,14 +62,17 @@ export class Speaker {
     this.voiceName = cfg.voiceName || '';
     this.enabled = cfg.speak !== false;
     this.all = Boolean(cfg.speakAll);
+    this.engine = cfg.voiceEngine || 'auto';
+    this.pitch = cfg.voicePitch || 'higher';
+    this.glitch = cfg.voiceGlitch || 'light';
     if (this.muted) this.stop();
   }
 
   get available() {
-    return Boolean(this.synth);
+    return true;
   }
 
-  // The voice for her language: the one picked in her settings, else one that suits her.
+  // The Windows voice for her language: the one picked in her settings, else one that suits her.
   voice() {
     const voices = this.synth?.getVoices() || [];
     if (this.voiceName) {
@@ -69,21 +84,66 @@ export class Speaker {
   }
 
   say(text) {
-    if (!this.synth || this.muted) return false;
+    if (this.muted) return false;
     const words = speakable(text);
     if (!words) return false;
-    const u = new SpeechSynthesisUtterance(words);
-    const voice = this.voice();
-    if (voice) u.voice = voice;
-    u.lang = voice?.lang || this.lang;
-    u.pitch = 1.15;
-    u.rate = 1.05;
-    u.volume = Math.min(1, this.volume + 0.2);
-    u.onstart = () => this.started();
-    u.onend = u.onerror = () => this.ended();
+    const gen = this.gen;
     this.queue += 1;
-    this.synth.speak(u);
+    this.chain = this.chain
+      .then(() => (gen === this.gen ? this.speakOne(words) : undefined))
+      .catch((err) => console.error('[capri] speaking:', err))
+      .finally(() => this.ended(gen));
     return true;
+  }
+
+  // One line: in her natural voice if she has one (main.js says null when she doesn't), else Windows'.
+  async speakOne(words) {
+    const pitch = PITCHES[this.pitch] ?? PITCHES.higher;
+    if (this.engine !== 'windows') {
+      const gen = this.gen;
+      const audio = await this.host.ttsSay(pronounced(words), speedFor(1.05, pitch)).catch(() => null);
+      if (gen !== this.gen) return undefined;
+      if (audio?.samples?.length) return this.play(audio, pitch, words);
+    }
+    return this.windows(words);
+  }
+
+  play({ samples, sampleRate }, pitch, words) {
+    this.ctx ??= new AudioContext();
+    const level = LEVELS[this.glitch] ?? LEVELS.light;
+    const out = construct(samples, sampleRate, { pitch, glitch: level, echo: level, seed: seedFor(words) });
+    const buffer = this.ctx.createBuffer(1, out.length, sampleRate);
+    buffer.copyToChannel(out, 0);
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = this.ctx.createGain();
+    gain.gain.value = Math.min(1, this.volume + 0.2);
+    source.connect(gain).connect(this.ctx.destination);
+    return new Promise((done) => {
+      source.onended = () => {
+        if (this.source === source) this.source = null;
+        done();
+      };
+      this.source = source;
+      this.started();
+      source.start();
+    });
+  }
+
+  windows(words) {
+    if (!this.synth) return undefined;
+    return new Promise((done) => {
+      const u = new SpeechSynthesisUtterance(words);
+      const voice = this.voice();
+      if (voice) u.voice = voice;
+      u.lang = voice?.lang || this.lang;
+      u.pitch = 1.15;
+      u.rate = 1.05;
+      u.volume = Math.min(1, this.volume + 0.2);
+      u.onstart = () => this.started();
+      u.onend = u.onerror = () => done();
+      this.synth.speak(u);
+    });
   }
 
   started() {
@@ -94,7 +154,8 @@ export class Speaker {
     this.talking = setInterval(() => this.capri.perform('talk'), TALK_EVERY_MS);
   }
 
-  ended() {
+  ended(gen) {
+    if (gen !== this.gen) return; // stop() has already tidied up
     this.queue = Math.max(0, this.queue - 1);
     if (this.queue) return;
     clearInterval(this.talking);
@@ -105,8 +166,14 @@ export class Speaker {
   }
 
   stop() {
-    if (!this.synth) return;
-    this.synth.cancel();
+    this.gen += 1;
+    this.synth?.cancel();
+    try {
+      this.source?.stop();
+    } catch {
+      // already over
+    }
+    this.source = null;
     this.queue = 0;
     clearInterval(this.talking);
     this.talking = 0;

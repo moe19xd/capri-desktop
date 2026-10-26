@@ -431,6 +431,12 @@ async function boot() {
       case 'voicePtt': // Ctrl+Alt+V: what you say next is for her
         listen.pushToTalk();
         break;
+      case 'voiceTest': // her menu › Voice: a voice, pitch or glitches just picked
+        listen.test();
+        break;
+      case 'ttsGet': // her menu › Voice › Her voice: one not fetched yet
+        listen.getVoice(cmd.id);
+        break;
       case 'heard': // --dev: as if her ears had heard that ({ text, wake })
         listen.heard(cmd.text, cmd.wake);
         break;

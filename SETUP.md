@@ -56,6 +56,8 @@ Then:
   *"Capri, tell me about Night City"*.
 - Or press **Ctrl+Alt+V** and just talk.
 - She answers out loud. **Voice** › *Answer out loud* turns that off.
+- **Her voice**: Voice › **Her voice** › pick one (Cori, Jenny and Alba are British; about 67 MB each, once).
+  Then Voice › **Pitch** and **Glitches** to make her sound like a construct, and **Test her voice** to hear it.
 
 No microphone? Windows Settings › Privacy & security › Microphone: turn on
 **Let desktop apps access your microphone**. Then Voice › Listen to me again.

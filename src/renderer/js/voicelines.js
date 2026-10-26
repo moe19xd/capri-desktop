@@ -21,6 +21,8 @@ export const VOICE = {
       fetching: 'Je récupère mes oreilles…', progress: '{done} / {total} Mo',
       failed: 'Impossible de le récupérer : {error}',
     },
+    newVoice: { line: 'Une nouvelle voix ? Il faut que je la télécharge.', quote: 'Environ {size} Mo, une fois. Elle tourne sur ton PC, gratuitement.' },
+    test: ['Test, test. C’est moi maintenant, choom.', 'Tu m’entends ? Tous mes esprits te disent salut.', 'Nouvelle voix, même chaos.'],
     did: {
       teleport: ['J’arrive.', 'Je bouge.'],
       satellite: ['Je lève les yeux.'],
@@ -72,6 +74,8 @@ export const VOICE = {
       fetching: 'Fetching my ears…', progress: '{done} / {total} MB',
       failed: 'Couldn’t fetch it: {error}',
     },
+    newVoice: { line: 'A new voice? I need to download it first.', quote: 'About {size} MB, once. It runs on your PC, for free.' },
+    test: ['Testing, testing. This is me now, choom.', 'Can you hear me? All of us say hi.', 'New voice. Same chaos.'],
     did: {
       teleport: ['On my way.', 'Moving.'],
       satellite: ['Looking up.'],
@@ -123,6 +127,8 @@ export const VOICE = {
       fetching: 'Recuperando mis oídos…', progress: '{done} / {total} MB',
       failed: 'No pude descargarlo: {error}',
     },
+    newVoice: { line: '¿Una voz nueva? Primero tengo que descargarla.', quote: 'Unos {size} MB, una vez. Funciona en tu PC, gratis.' },
+    test: ['Probando, probando. Ahora soy yo, choom.', '¿Me oyes? Todas nosotras te saludamos.', 'Voz nueva, mismo caos.'],
     did: {
       teleport: ['Voy.', 'Me muevo.'],
       satellite: ['Miro arriba.'],
@@ -174,6 +180,8 @@ export const VOICE = {
       fetching: 'Buscando meus ouvidos…', progress: '{done} / {total} MB',
       failed: 'Não consegui baixar: {error}',
     },
+    newVoice: { line: 'Uma voz nova? Preciso baixar primeiro.', quote: 'Uns {size} MB, uma vez. Roda no seu PC, de graça.' },
+    test: ['Testando, testando. Agora sou eu, choom.', 'Tá me ouvindo? Todas nós mandamos oi.', 'Voz nova, mesmo caos.'],
     did: {
       teleport: ['Tô indo.', 'Me mexendo.'],
       satellite: ['Olhando pra cima.'],
@@ -225,6 +233,8 @@ export const VOICE = {
       fetching: 'Достаю свои уши…', progress: '{done} / {total} МБ',
       failed: 'Не получилось скачать: {error}',
     },
+    newVoice: { line: 'Новый голос? Сначала мне надо его скачать.', quote: 'Около {size} МБ, один раз. Работает на твоём ПК, бесплатно.' },
+    test: ['Проверка, проверка. Теперь это я, чумба.', 'Слышишь меня? Мы все передаём привет.', 'Новый голос, тот же хаос.'],
     did: {
       teleport: ['Уже иду.', 'Двигаюсь.'],
       satellite: ['Смотрю вверх.'],

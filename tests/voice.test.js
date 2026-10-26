@@ -126,3 +126,23 @@ test('what she says out loud: no code, links or markdown', async () => {
   const { speakable } = await load('speak.js');
   assert.strictEqual(speakable('**Preem**! See `npm test` at https://x.dev\n```js\nlet a\n```\nDone [[open: Spotify]]'), 'Preem! See npm test at Done');
 });
+
+test('her construct voice: same line, same glitches; never clips; louder than nothing', async () => {
+  const { construct, seedFor, PITCHES, LEVELS } = await load('construct.js');
+  const rate = 22050;
+  const tone = new Float32Array(rate * 2).map((_, i) => 0.6 * Math.sin(i / 8) * (i % 5000 < 3500 ? 1 : 0.01));
+  const fx = { pitch: PITCHES.higher, glitch: LEVELS.strong, echo: LEVELS.strong, seed: seedFor('Hey choom') };
+  const a = construct(tone, rate, fx);
+  const b = construct(tone, rate, fx);
+  assert.deepStrictEqual(a, b);
+  let peak = 0;
+  for (const s of a) {
+    assert.ok(Number.isFinite(s));
+    peak = Math.max(peak, Math.abs(s));
+  }
+  assert.ok(peak <= 0.93 && peak > 0.5, `peak ${peak}`);
+  // pitched up: shorter, then a little longer again with its stutters and echo tail
+  const clean = construct(tone, rate, { pitch: PITCHES.higher, glitch: 0, echo: 0 });
+  assert.ok(clean.length < tone.length);
+  assert.ok(a.length > clean.length);
+});

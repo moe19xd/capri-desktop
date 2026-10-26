@@ -300,7 +300,53 @@ export class Listen {
     });
   }
 
+  // Her voice out loud, for you to hear (her menu: a voice, pitch or glitches just picked)
+  test() {
+    const line = pick(this.t.test);
+    this.capri.wake();
+    this.lastHeard = '';
+    this.panel.say({ kind: 'info', badge: this.t.badge, line, hold: 5000 });
+    if (!this.speaker.all) this.speaker.say(line);
+  }
+
+  // A natural voice picked in her menu, not fetched yet: she asks, then fetches it.
+  async getVoice(id) {
+    const { panel, host } = this;
+    if (this.fetching) return;
+    const size = Math.round((await host.ttsSize(id)) / 1e6);
+    const answer = await new Promise((resolve) => {
+      const shown = panel.say({
+        kind: 'info',
+        face: 'look',
+        guide: true,
+        badge: this.t.badge,
+        line: this.t.newVoice.line,
+        quote: fmt(this.t.newVoice.quote, { size }),
+        actions: [{ id: 'get', label: this.t.setup.get, primary: true }, { id: 'no', label: this.t.setup.no }],
+        onAction: resolve,
+        onLeave: () => resolve('no'),
+        hold: null,
+      });
+      if (!shown) resolve('no');
+    });
+    if (answer !== 'get') {
+      panel.hide();
+      return;
+    }
+    const ok = await this.download(() => host.ttsGet(id));
+    if (ok) this.test();
+  }
+
   async fetch({ light = false } = {}) {
+    const ok = await this.download(() => this.host.getVoice({ light }));
+    if (ok) {
+      this.panel.hide(); // "ears on" comes once they're listening
+      this.capri.perform('hop');
+    }
+  }
+
+  // Fetching something for her voice, with a bar: run() resolves with { ok, error }.
+  async download(run) {
     const { panel, host } = this;
     const s = this.t.setup;
     this.fetching = true;
@@ -319,16 +365,12 @@ export class Listen {
       panel.setProgress(total ? done / total : 0);
       panel.setQuote(unpacking ? s.unpacking : fmt(s.progress, { done: Math.round(done / 1e6), total: Math.round(total / 1e6) }));
     });
-    const res = await host.getVoice({ light });
+    const res = await run();
     off();
     this.fetching = false;
-    if (res.ok) {
-      panel.hide(); // "ears on" comes once they're listening
-      this.capri.perform('hop');
-    } else if (res.error === 'cancelled') {
-      panel.hide();
-    } else {
-      panel.say({ kind: 'error', face: 'aside', badge: this.t.badge, line: fmt(s.failed, { error: res.error }), hold: 9000 });
-    }
+    if (res.ok) return true;
+    if (res.error === 'cancelled') panel.hide();
+    else panel.say({ kind: 'error', face: 'aside', badge: this.t.badge, line: fmt(s.failed, { error: res.error }), hold: 9000 });
+    return false;
   }
 }
