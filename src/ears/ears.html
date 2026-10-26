@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <!-- Her ears: a hidden window of their own. Vosk compiles its WebAssembly with eval, which her
+       overlay's policy doesn't allow, so only this page (no buttons, no text from anyone) gets it;
+       its WebAssembly comes inlined as a data: URL. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src blob:; connect-src capri: data:">
+  <title>Capri — ears</title>
+</head>
+<body>
+  <script src="../../node_modules/vosk-browser/dist/vosk.js"></script>
+  <script src="ears.js"></script>
+</body>
+</html>

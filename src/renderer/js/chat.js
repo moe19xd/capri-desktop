@@ -72,6 +72,7 @@ export class Chat {
     this.appsReady = Promise.resolve();
     this.onSetup = null; // (status) => void: she can't answer yet (app.js hands it to setup.js)
     this.onBetterModel = null; // () => void: a bigger model than the tiny one she's on (setup.js)
+    this.onAnswer = null; // (answer, { voice }) => void: her whole answer, once in (speak.js says it out loud)
     host.onChatDelta(({ id, text }) => this.onDelta(id, text));
   }
 
@@ -166,7 +167,8 @@ export class Chat {
     this.capri.nextGaze = performance.now() + 60000;
   }
 
-  async send(text) {
+  // voice: you said it out loud (listen.js), so she answers out loud
+  async send(text, { voice = false } = {}) {
     if (this.turn || !this.open) return;
     const id = Date.now();
     this.turn = id;
@@ -209,6 +211,7 @@ export class Chat {
     this.panel.stream(answer, { done: true });
     this.panel.setFace(mood(answer));
     this.panel.setChatBusy(false);
+    this.onAnswer?.(answer, { voice });
     if (!this.agent) this.after(res.text, answer, asked, early, text);
     this.listApps(); // fresh for the next message
   }

@@ -17,6 +17,7 @@ const TRAY = {
     possess: 'Posséder mes fenêtres', lang: 'Langue', auto: 'Automatique (système)', startup: 'Lancer au démarrage',
     hooksOn: 'Hooks Claude Code : installés', hooksOff: 'Installer les hooks Claude Code',
     hooksRemove: 'Retirer les hooks Claude Code', forget: 'Oublier nos conversations', quit: 'Quitter',
+    voice: 'Voix', voiceListen: 'M’écouter (« Capri, … »)', voicePtt: 'Lui parler maintenant', voiceAnswer: 'Répondre à voix haute', voiceAll: 'Lire toutes ses répliques à voix haute', voiceFolder: 'Ouvrir le dossier des voix',
   },
   en: {
     name: 'English',
@@ -31,6 +32,7 @@ const TRAY = {
     possess: 'Possess my windows', lang: 'Language', auto: 'Automatic (system)', startup: 'Start with Windows',
     hooksOn: 'Claude Code hooks: installed', hooksOff: 'Install Claude Code hooks',
     hooksRemove: 'Remove Claude Code hooks', forget: 'Forget our conversations', quit: 'Quit',
+    voice: 'Voice', voiceListen: 'Listen to me (“Capri, …”)', voicePtt: 'Talk to her now', voiceAnswer: 'Answer out loud', voiceAll: 'Read all her lines out loud', voiceFolder: 'Open voice models folder',
   },
   es: {
     name: 'Español',
@@ -45,6 +47,7 @@ const TRAY = {
     possess: 'Poseer mis ventanas', lang: 'Idioma', auto: 'Automático (sistema)', startup: 'Iniciar con Windows',
     hooksOn: 'Hooks de Claude Code: instalados', hooksOff: 'Instalar los hooks de Claude Code',
     hooksRemove: 'Quitar los hooks de Claude Code', forget: 'Olvidar nuestras conversaciones', quit: 'Salir',
+    voice: 'Voz', voiceListen: 'Escucharme («Capri, …»)', voicePtt: 'Hablarle ahora', voiceAnswer: 'Responder en voz alta', voiceAll: 'Leer todas sus frases en voz alta', voiceFolder: 'Abrir la carpeta de voces',
   },
   pt: {
     name: 'Português (Brasil)',
@@ -59,6 +62,7 @@ const TRAY = {
     possess: 'Possuir minhas janelas', lang: 'Idioma', auto: 'Automático (sistema)', startup: 'Iniciar com o Windows',
     hooksOn: 'Hooks do Claude Code: instalados', hooksOff: 'Instalar os hooks do Claude Code',
     hooksRemove: 'Remover os hooks do Claude Code', forget: 'Esquecer nossas conversas', quit: 'Sair',
+    voice: 'Voz', voiceListen: 'Me ouvir (“Capri, …”)', voicePtt: 'Falar com ela agora', voiceAnswer: 'Responder em voz alta', voiceAll: 'Ler todas as falas dela em voz alta', voiceFolder: 'Abrir a pasta de vozes',
   },
   ru: {
     name: 'Русский',
@@ -73,6 +77,7 @@ const TRAY = {
     possess: 'Вселяться в мои окна', lang: 'Язык', auto: 'Автоматически (системный)', startup: 'Запускать вместе с Windows',
     hooksOn: 'Хуки Claude Code: установлены', hooksOff: 'Установить хуки Claude Code',
     hooksRemove: 'Удалить хуки Claude Code', forget: 'Забыть наши разговоры', quit: 'Выйти',
+    voice: 'Голос', voiceListen: 'Слушать меня («Капри, …»)', voicePtt: 'Сказать ей сейчас', voiceAnswer: 'Отвечать вслух', voiceAll: 'Читать все её реплики вслух', voiceFolder: 'Открыть папку голосов',
   },
 };
 

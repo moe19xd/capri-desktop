@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
 const {
   app, BrowserWindow, Tray, Menu, ipcMain, screen, protocol, net, shell, globalShortcut, nativeImage,
-  clipboard, ClipboardItem, dialog, powerMonitor,
+  clipboard, ClipboardItem, dialog, powerMonitor, session,
 } = require('electron');
 
 const config = require('./config');
@@ -17,6 +17,7 @@ const llm = require('./llm');
 const setup = require('./setup');
 const apps = require('./apps');
 const launch = require('./launch');
+const ears = require('./ears');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
 const activeHooks = () => activeAssistant().hooks;
@@ -71,11 +72,15 @@ function forgetChats() {
 
 // capri://app/...        -> files of this repo
 // capri://usersounds/... -> the user's own sound overrides
+// capri://app/voice-models/... -> the voice models her ears use (ears.js), same origin as her pages
+const VOICE_PATH = '/voice-models/';
 function serveProtocol() {
   protocol.handle('capri', (request) => {
     const url = new URL(request.url);
-    const base = url.host === 'usersounds' ? userSoundsDir() : ROOT;
-    const target = path.resolve(base, '.' + decodeURIComponent(url.pathname));
+    const voice = url.host === 'app' && url.pathname.startsWith(VOICE_PATH);
+    const base = url.host === 'usersounds' ? userSoundsDir() : voice ? ears.dir() : ROOT;
+    const file = voice ? url.pathname.slice(VOICE_PATH.length - 1) : url.pathname;
+    const target = path.resolve(base, '.' + decodeURIComponent(file));
     if (target !== base && !target.startsWith(base + path.sep)) {
       return new Response('forbidden', { status: 403 });
     }
@@ -237,6 +242,7 @@ function rendererConfig() {
 function updateConfig(patch) {
   config.save(patch);
   if ('rest' in patch) fitOverlay(); // the taskbar in her window or not
+  if ('listen' in patch || 'lang' in patch) applyVoice();
   const cfg = rendererConfig();
   overlay?.webContents.send('capri:config', cfg);
   rebuildTray();
@@ -282,6 +288,32 @@ function rebuildTray() {
           click: () => {
             fs.mkdirSync(userSoundsDir(), { recursive: true });
             shell.openPath(userSoundsDir());
+          },
+        },
+      ],
+    },
+    {
+      label: t.voice,
+      submenu: [
+        {
+          label: t.voiceListen,
+          type: 'checkbox',
+          checked: cfg.listen,
+          // her voice model not fetched yet for this language: she asks first (it's a download)
+          click: (item) => (item.checked && !ears.status(resolveLang(cfg.lang)).installed
+            ? (rebuildTray(), sendCommand('voiceSetup'))
+            : updateConfig({ listen: item.checked })),
+        },
+        { label: t.voicePtt, accelerator: 'Ctrl+Alt+V', enabled: cfg.listen, click: () => sendCommand('voicePtt') },
+        { type: 'separator' },
+        { label: t.voiceAnswer, type: 'checkbox', checked: cfg.speak, click: (item) => updateConfig({ speak: item.checked }) },
+        { label: t.voiceAll, type: 'checkbox', checked: cfg.speakAll, click: (item) => updateConfig({ speakAll: item.checked }) },
+        { type: 'separator' },
+        {
+          label: t.voiceFolder,
+          click: () => {
+            fs.mkdirSync(ears.dir(), { recursive: true });
+            shell.openPath(ears.dir());
           },
         },
       ],
@@ -441,6 +473,24 @@ async function pickClaudeFolder() {
   updateConfig({ claudeCwd: filePaths[0] });
 }
 
+// Her ears (ears.js): on while "Listen" is ticked and her voice model for this language is here.
+// What they hear goes to the overlay (listen.js), which decides what to do with it.
+let voiceFetch = null; // AbortController of a model download
+function applyVoice() {
+  const cfg = config.load();
+  const lang = resolveLang(cfg.lang);
+  if (cfg.listen && ears.status(lang).installed) {
+    ears.start(lang, (msg) => {
+      if (DEV && msg.type !== 'partial') console.log('[voice]', JSON.stringify(msg));
+      // no microphone, or a model that won't load: her ears close, and she says why
+      if (msg.type === 'error') ears.stop();
+      overlay?.webContents.send('voice:event', msg);
+    }, { dev: DEV });
+  } else {
+    ears.stop();
+  }
+}
+
 function createTray() {
   const icon = nativeImage.createFromPath(path.join(ROOT, 'assets', 'icons', 'tray.png'));
   tray = new Tray(icon);
@@ -592,6 +642,33 @@ function registerIpc() {
     else shell.openPath(dir);
     return { found: true, dir, file: fs.existsSync(file), label: fs.existsSync(file) ? path.basename(file) : path.basename(dir) };
   });
+  // her voice: the model for her language (fetched once, with her line showing how far it is), her
+  // ears, and keeping quiet while she talks herself
+  ipcMain.handle('voice:status', () => {
+    const cfg = config.load();
+    return { ...ears.status(resolveLang(cfg.lang)), listen: cfg.listen, listening: ears.listening() };
+  });
+  ipcMain.handle('voice:get', async () => {
+    const lang = resolveLang(config.load().lang);
+    voiceFetch?.abort();
+    voiceFetch = new AbortController();
+    let last = 0;
+    try {
+      await ears.download(lang, ({ done, total }) => {
+        if (Date.now() - last < 150) return;
+        last = Date.now();
+        overlay?.webContents.send('voice:progress', { done, total });
+      }, voiceFetch.signal);
+      updateConfig({ listen: true });
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: voiceFetch?.signal.aborted ? 'cancelled' : err.message };
+    } finally {
+      voiceFetch = null;
+    }
+  });
+  ipcMain.on('voice:cancel', () => voiceFetch?.abort());
+  ipcMain.on('voice:pause', (_e, on) => ears.pause(on));
   ipcMain.handle('sounds:list', () => {
     try {
       return fs.readdirSync(userSoundsDir())
@@ -710,6 +787,16 @@ function main() {
       onDebug: DEV ? debugHandler : null,
     });
     globalShortcut.register('Control+Alt+C', () => toggleVisible());
+    // talk to her without saying her name first (or, her ears off, she offers to turn them on)
+    globalShortcut.register('Control+Alt+V', () => sendCommand(ears.listening() ? 'voicePtt' : 'voiceSetup'));
+    // the microphone: only for her ears' page, and only sound
+    session.defaultSession.setPermissionRequestHandler((contents, permission, callback, details) => {
+      if (permission === 'media') return callback(ears.isEars(contents) && (details.mediaTypes || []).every((m) => m === 'audio'));
+      return callback(true);
+    });
+    session.defaultSession.setPermissionCheckHandler((contents, permission) => (permission === 'media' ? ears.isEars(contents) : true));
+    ears.init();
+    setTimeout(applyVoice, 4000); // after her intro: loading the model takes the CPU a moment
     llm.restoreClaude(readMemory().claude);
     refreshModels(); // for her menu's model list
     setTimeout(() => launch.launchables().catch(() => {}), 20000); // what she can open, before you ask
@@ -724,6 +811,7 @@ function main() {
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
     windowWatch?.stop();
+    ears.stop();
   });
   app.on('window-all-closed', (e) => e.preventDefault());
 }

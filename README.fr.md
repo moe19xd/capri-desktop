@@ -170,6 +170,30 @@ fan d'elle, et le panneau du chat le dit à chaque fois.
 
 Rien d'autre : elle ne voit ni ton écran ni tes fichiers.
 
+### Lui parler à voix haute
+
+Son menu › **Voix** › **M’écouter** : la première fois, elle propose de récupérer ses oreilles, un modèle de voix
+d’environ 45 Mo pour sa langue ([Vosk](https://alphacephei.com/vosk/), Apache 2.0). Il tourne sur ton PC : rien de
+ce que tu dis n’en sort, et rien à payer.
+
+- **« Capri, … »** : dis son nom, puis ce que tu veux, d’une traite ou après qu’elle s’est tournée vers toi (« J’écoute. »).
+  Ce qui est dit sans son nom ne la regarde pas : elle ne le garde pas et ne l’envoie nulle part.
+- **Ctrl+Alt+V** : ce que tu dis ensuite est pour elle, pas besoin de son nom.
+- **Ce qu’elle fait tout de suite**, sans IA : « téléporte-toi », « cache-toi » / « reviens », « va dormir » /
+  « réveille-toi », « tourne », « regarde le satellite », « où en est Claude ? », « rapport », « quelle heure est-il ? »,
+  « tais-toi », « arrête d’écouter ». Et ce que son chat fait tout de suite aussi : « ouvre Spotify », « pause »,
+  « suivante », « monte le son », « mets Daft Punk sur Spotify », « appelle-moi Max ».
+- **Tout le reste** part dans son chat (voir « Lui parler » plus haut), et elle **répond à voix haute** avec une des
+  voix de Windows. Son menu › Voix › **Répondre à voix haute** pour l’en empêcher ; **Lire toutes ses répliques à voix
+  haute** pour qu’elle dise tout.
+- Pendant qu’elle parle, elle n’écoute pas (elle s’entendrait), et Windows affiche son icône de micro tant que ses
+  oreilles sont branchées.
+- Pas de micro ? Paramètres Windows › Confidentialité › Microphone : autorise les applications de bureau.
+
+Les modèles viennent du site du projet [vosk-browser](https://github.com/ccoreilly/vosk-browser). Derrière un
+pare-feu, dépose le `.tar.gz` toi-même dans son dossier des voix (son menu › Voix › *Ouvrir le dossier des voix*), ou
+fais pointer `CAPRI_VOICE_URL` vers un miroir.
+
 ### La personnaliser
 
 Clic droit sur elle › **La personnaliser…** (ou « Me personnaliser » dans son guide), un panneau à la fois, et chacun

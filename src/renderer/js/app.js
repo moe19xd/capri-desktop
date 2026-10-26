@@ -9,6 +9,8 @@ import { Mission } from './mission.js';
 import { Chat } from './chat.js';
 import { Setup } from './setup.js';
 import { Custom } from './custom.js';
+import { Speaker } from './speak.js';
+import { Listen } from './listen.js';
 import { linesFor } from './lines.js';
 import { pick, fmt, reducedMotion } from './util.js';
 
@@ -216,6 +218,20 @@ async function boot() {
   chat.onSetup = (status) => setup.chat(status);
   chat.onBetterModel = () => setup.better();
   setup.onReady = () => chat.start();
+  // Her voice: out loud with Windows' voices (speak.js), and her ears, "Capri, …" (listen.js)
+  const speaker = new Speaker({ capri, host });
+  speaker.configure(config);
+  const listen = new Listen({ capri, panel, host, brain, chat, speaker });
+  chat.onAnswer = (answer, { voice }) => {
+    if ((voice && speaker.enabled) || speaker.all) speaker.say(answer);
+  };
+  // all her lines out loud, if you asked for that (her menu › Voice); her chat's answers go through onAnswer
+  const sayLine = panel.say.bind(panel);
+  panel.say = (msg) => {
+    const shown = sayLine(msg);
+    if (shown && speaker.all && msg.line && msg.kind !== 'chat') speaker.say(msg.line);
+    return shown;
+  };
   // What she calls you, how she is, your lines, what she remembers (custom.js)
   const custom = new Custom({ guide, host, brain, capri, voice });
   guide.custom = custom;
@@ -326,6 +342,7 @@ async function boot() {
 
   host.onConfig((cfg) => {
     voice.configure(cfg);
+    speaker.configure(cfg);
     capri.wander = cfg.wander;
     capri.possessWindows = cfg.possess;
     capri.restOn = cfg.rest || 'corner';
@@ -407,6 +424,15 @@ async function boot() {
         break;
       case 'chat': // "Talk to her" in her menu
         chat.start();
+        break;
+      case 'voiceSetup': // "Listen to me" in her menu, her voice model not here yet
+        listen.setup();
+        break;
+      case 'voicePtt': // Ctrl+Alt+V: what you say next is for her
+        listen.pushToTalk();
+        break;
+      case 'heard': // --dev: as if her ears had heard that ({ text, wake })
+        listen.heard(cmd.text, cmd.wake);
         break;
       case 'report': // "Mission report" in her menu
         if (capri.stowed) {

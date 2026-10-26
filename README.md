@@ -160,6 +160,28 @@ panel says so every time.
 
 Nothing else: she can't see your screen or your files.
 
+### Talk to her out loud
+
+Her menu › **Voice** › **Listen to me**: the first time, she offers to fetch her ears, a voice model of about 40 MB
+for her language ([Vosk](https://alphacephei.com/vosk/), Apache 2.0). It runs on your PC: nothing you say leaves it,
+and there's nothing to pay.
+
+- **"Capri, …"**: say her name, then what you want, in one breath or after she turns to you ("Listening.").
+  Anything said without her name is none of her business: she doesn't keep it or send it anywhere.
+- **Ctrl+Alt+V**: whatever you say next is for her, no name needed.
+- **Things she does right away**, no AI needed: "teleport", "hide" / "come back", "go to sleep" / "wake up", "spin",
+  "look at the satellite", "what's Claude doing?", "mission report", "what time is it?", "be quiet",
+  "stop listening". And what her chat does right away too: "open Spotify", "pause", "next", "louder",
+  "put Daft Punk on Spotify", "call me Max".
+- **Anything else** goes to her chat (see "Talk to her" above), and she **answers out loud** with one of Windows' own
+  voices. Her menu › Voice › **Answer out loud** turns that off; **Read all her lines out loud** turns it up.
+- While she talks she doesn't listen (she'd hear herself), and Windows shows its microphone icon while her ears are on.
+- No microphone? Windows Settings › Privacy › Microphone: let desktop apps use it.
+
+The models come from the [vosk-browser](https://github.com/ccoreilly/vosk-browser) project's site. Behind a firewall,
+put the `.tar.gz` in her voice folder yourself (her menu › Voice › *Open voice models folder*), or point
+`CAPRI_VOICE_URL` at a mirror.
+
 ### Make her yours
 
 Right-click her › **Make her yours…** (or "Make me yours" in her guide), one panel at a time, each one skippable:
@@ -323,6 +345,9 @@ Your file contents are never sent: for a write, only its size goes through.
 
 Her chat goes to Ollama on your PC (`127.0.0.1:11434`, or `OLLAMA_HOST`) with what she knows of the moment (the
 project's name, Claude's last action, today's counts). Her mission log stays in her own storage on your PC.
+
+Her ears (Voice › Listen to me) hear you through a model running on your PC: what you say never leaves it. The only
+thing fetched is that model, once, from the vosk-browser project's site.
 
 ## Art direction
 
