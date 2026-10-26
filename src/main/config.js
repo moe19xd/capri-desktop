@@ -37,7 +37,7 @@ const DEFAULTS = {
   voiceName: '',     // the Windows voice she talks with ('' : she picks one for her language)
   ttsVoice: '',      // her natural voice (tts.js), by id ('' : the first one fetched for her language)
   voiceEngine: 'auto', // 'auto': her natural voice when she has one, else Windows'; 'windows': Windows' always
-  voicePitch: 'higher', // construct.js PITCHES: natural, higher, highest
+  voicePitch: 'highest', // construct.js PITCHES: natural, higher, highest
   voiceGlitch: 'light', // construct.js LEVELS: off, light, strong (her glitches and echo)
 };
 

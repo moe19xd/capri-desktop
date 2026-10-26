@@ -56,7 +56,8 @@ Then:
   *"Capri, tell me about Night City"*.
 - Or press **Ctrl+Alt+V** and just talk.
 - She answers out loud. **Voice** › *Answer out loud* turns that off.
-- **Her voice**: Voice › **Her voice** › pick one (Cori, Jenny and Alba are British; about 67 MB each, once).
+- **Her voice**: Voice › **Her voice** › **Alice (UK, expressive)** is the closest to her (about 130 MB, once, for
+  all the "expressive" voices). On an older PC, if she's slow to answer, pick a quicker one (Cori, Jenny…).
   Then Voice › **Pitch** and **Glitches** to make her sound like a construct, and **Test her voice** to hear it.
 
 No microphone? Windows Settings › Privacy & security › Microphone: turn on

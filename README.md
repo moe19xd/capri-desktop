@@ -179,8 +179,11 @@ menu adds Whisper later. Only what you say to her goes through Whisper: the rest
   "stop listening". And what her chat does right away too: "open Spotify", "pause", "next", "louder",
   "put Daft Punk on Spotify", "call me Max".
 - **Anything else** goes to her chat (see "Talk to her" above), and she **answers out loud**.
-- **Her voice**: Voice › *Her voice* fetches a natural voice (Piper, about 67 MB, offline: Cori, Jenny or Alba from
-  the UK, Amy or HFC from the US; Siwis in French, Daniela in Spanish, Irina in Russian), made into a construct's:
+- **Her voice**: Voice › *Her voice* fetches a natural voice, offline: the **expressive** ones (Kokoro, about 130 MB
+  once for all of them: Alice and Lily from the UK, Jessica and Heart from the US, Siwis in French, Dora in Spanish and
+  Brazilian Portuguese), or quicker, flatter ones (Piper, about 67 MB each: Cori, Jenny, Alba, Amy, HFC, Daniela,
+  Irina). She says her lines a sentence at a time, an exclamation quicker and higher, a question rising. Made into a
+  construct's:
   pitched up, with glitches and a digital echo (Voice › *Pitch* and *Glitches*, *Test her voice*). Without one, or with
   *Windows voice* picked, she uses Windows' own. It's not the actress's voice, and won't be: that's hers. Her menu › Voice › **Answer out loud** turns that off; **Read all her lines out loud** turns it up.
 - While she talks she doesn't listen (she'd hear herself), and Windows shows its microphone icon while her ears are on.

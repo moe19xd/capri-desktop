@@ -128,4 +128,4 @@ export const seedFor = hash;
 
 // Her settings (config), as a level name: off, light, strong
 export const LEVELS = { off: 0, light: 0.35, strong: 0.8 };
-export const PITCHES = { natural: 1, higher: 1.08, highest: 1.16 };
+export const PITCHES = { natural: 1, higher: 1.1, highest: 1.22 };

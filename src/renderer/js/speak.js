@@ -10,6 +10,17 @@ const MAX_CHARS = 420; // past that, the panel has the rest
 // words her natural voice says wrong, spelled the way it gets them right
 const PRONOUNCE = [[/\bchoom(s?)\b/gi, 'choomm$1'], [/\bnetrunner/gi, 'net runner'], [/\bpreem\b/gi, 'preemm']];
 const pronounced = (text) => PRONOUNCE.reduce((t, [re, to]) => t.replace(re, to), text);
+
+// Her line in sentences: she starts on the first while the next is being made.
+export const sentences = (text) => (text.match(/[^.!?…]+(?:[.!?…]+|$)\s*/g) || [text]).map((s) => s.trim()).filter(Boolean);
+
+// How a sentence is said: an exclamation quicker and higher, a question up, a trailing "…" slower.
+export function mood(sentence) {
+  if (/!\s*$/.test(sentence)) return { speed: 1.07, pitch: 1.035 };
+  if (/\?\s*$/.test(sentence)) return { speed: 1.02, pitch: 1.025 };
+  if (/(\.\.\.|…)\s*$/.test(sentence)) return { speed: 0.9, pitch: 0.985 };
+  return { speed: 1, pitch: 1 };
+}
 const TALK_EVERY_MS = 650;
 
 // What's worth saying of a reply: no code, no links, no markdown, cut at a sentence.
@@ -96,16 +107,29 @@ export class Speaker {
     return true;
   }
 
-  // One line: in her natural voice if she has one (main.js says null when she doesn't), else Windows'.
+  // One line: in her natural voice if she has one (main.js says null when she doesn't), else
+  // Windows'. A sentence at a time, each said its own way (mood), the next made while she says
+  // this one.
   async speakOne(words) {
-    const pitch = PITCHES[this.pitch] ?? PITCHES.higher;
-    if (this.engine !== 'windows') {
-      const gen = this.gen;
-      const audio = await this.host.ttsSay(pronounced(words), speedFor(1.05, pitch)).catch(() => null);
+    const base = PITCHES[this.pitch] ?? PITCHES.higher;
+    if (this.engine === 'windows') return this.windows(words);
+    const gen = this.gen;
+    const parts = sentences(words);
+    const ask = (text) => {
+      const m = mood(text);
+      const pitch = base * m.pitch;
+      return this.host.ttsSay(pronounced(text), speedFor(1.05 * m.speed, pitch))
+        .then((audio) => (audio?.samples?.length ? { ...audio, pitch, text } : null), () => null);
+    };
+    let next = ask(parts[0]);
+    for (let i = 0; i < parts.length; i++) {
+      const audio = await next;
       if (gen !== this.gen) return undefined;
-      if (audio?.samples?.length) return this.play(audio, pitch, words);
+      if (!audio) return i === 0 ? this.windows(words) : undefined; // no natural voice: Windows'
+      next = i + 1 < parts.length ? ask(parts[i + 1]) : null;
+      await this.play(audio, audio.pitch, audio.text);
     }
-    return this.windows(words);
+    return undefined;
   }
 
   play({ samples, sampleRate }, pitch, words) {

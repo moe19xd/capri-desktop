@@ -146,3 +146,12 @@ test('her construct voice: same line, same glitches; never clips; louder than no
   assert.ok(clean.length < tone.length);
   assert.ok(a.length > clean.length);
 });
+
+test('her lines in sentences, each said its own way', async () => {
+  const { sentences, mood } = await load('speak.js');
+  assert.deepStrictEqual(sentences('Yeah, I hear you! Want more? Hmm... okay'), ['Yeah, I hear you!', 'Want more?', 'Hmm...', 'okay']);
+  assert.ok(mood('Yeah!').speed > 1 && mood('Yeah!').pitch > 1);
+  assert.ok(mood('Really?').pitch > 1);
+  assert.ok(mood('Well...').speed < 1);
+  assert.deepStrictEqual(mood('Okay.'), { speed: 1, pitch: 1 });
+});
