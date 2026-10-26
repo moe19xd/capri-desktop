@@ -1,5 +1,7 @@
 **English** · [Français](README.fr.md)
 
+> **Setting her up at home? See [SETUP.md](SETUP.md)**: one installer to download, or one `Install Capri.bat` to double-click.
+
 # Capri
 
 Capri, the *Project Capricorn* construct from Cyberpunk: Edgerunners season 2, lives on your desktop
