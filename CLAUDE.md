@@ -21,9 +21,14 @@ comments in Capri's voice ("her ears", "she says"), no semicolon-free style, 2-s
   `lines.js` (her lines, 5 languages). Voice (ours): `listen.js` (wake word, commands, routing),
   `speak.js` (Speaker: Kokoro/Piper via IPC, sentence pipeline, Windows voices fallback),
   `construct.js` (pitch/glitch/echo DSP), `voicelines.js` (voice strings + command regexes, 5 languages).
+  Also ours: `fullscreen.js` (hide her window over full-screen apps), `skills.js` (reminders/timers, calc without
+  eval, search, clipboard; parsed in `chat.asked()`, 5 languages), `update.js` + main `updater.js` (private-repo
+  auto-update with a sealed read-only token). Memory: `chat.learn()` → `config.learned` (dated facts).
 - `src/preload.js` — the overlay's whole `window.host` API. New IPC = main handler + preload entry.
-- `tests/` — `npm run test:hooks`, `test:voice`, `test:llm` (node --test, no Electron needed).
-- `.github/workflows/build.yml` — every push to `main` builds `Capri-Setup-x.y.z.exe` on the `latest` release.
+- `tests/` — `npm run test:hooks`, `test:voice`, `test:llm`, `test:chat`, `test:skills` (node --test, no Electron).
+  Always `node --check` every touched file (renderer: `node --check --input-type=module < file`).
+- `.github/workflows/build.yml` — every push to `main` builds `Capri-Setup-0.5.<run>.exe` on the `latest` release
+  (the version is set at build time; installed copies compare it to update themselves).
 
 ## Voice pipeline
 mic → ears page: silence gate (RMS vs noise floor, 1.3 s hangover, forces end of sentence) → Vosk grammar
