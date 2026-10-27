@@ -21,6 +21,7 @@
     "test:voice": "node --test tests/voice.test.js",
     "test:llm": "node --test tests/llm.test.js",
     "test:chat": "node --test tests/chat.test.js",
+    "test:skills": "node --test tests/skills.test.js",
     "dist": "electron-builder --win"
   },
   "keywords": [

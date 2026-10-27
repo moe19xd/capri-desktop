@@ -825,6 +825,8 @@ function registerIpc() {
   ipcMain.handle('tts:size', (_e, id) => tts.list().find((v) => v.id === id)?.size || 0);
   ipcMain.on('voice:pause', (_e, on) => ears.pause(on));
   ipcMain.on('voice:arm', (_e, ms) => ears.arm(ms));
+  // what you copied, when you ask her about it (skills.js): read then, never kept
+  ipcMain.handle('clip:read', () => clipboard.readText().slice(0, 20000));
   ipcMain.handle('sounds:list', () => {
     try {
       return fs.readdirSync(userSoundsDir())

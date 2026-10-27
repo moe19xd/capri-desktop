@@ -33,6 +33,7 @@ jobs:
           npm run test:voice
           npm run test:llm
           npm run test:chat
+          npm run test:skills
 
       - name: Installer
         run: npm run dist -- --publish never

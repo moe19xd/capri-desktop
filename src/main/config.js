@@ -27,6 +27,7 @@ const DEFAULTS = {
   memories: [],      // things you asked her to remember (her chat)
   learned: [],       // what she picked up about you on her own, [{ at: 'YYYY-MM-DD', fact }] (chat.js learn())
   learn: true,       // she picks things up about you from your chats
+  reminders: [],     // [{ id, at (ms), ms, task }]: her timers and reminders (skills.js)
   claudeMode: 'default', // Claude Code's permission mode in her chat: 'default' only reads, 'acceptEdits' edits without asking
   claude: true,      // she watches Claude Code (off: she just keeps you company, no word of it)
   rest: 'corner',    // where she rests when nothing's going on: 'corner', or 'taskbar' (sitting on it)

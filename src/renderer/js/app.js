@@ -12,6 +12,7 @@ import { Custom } from './custom.js';
 import { Speaker } from './speak.js';
 import { Listen } from './listen.js';
 import { Fullscreen } from './fullscreen.js';
+import { Skills } from './skills.js';
 import { linesFor } from './lines.js';
 import { pick, fmt, reducedMotion } from './util.js';
 
@@ -227,6 +228,13 @@ async function boot() {
   const speaker = new Speaker({ capri, host });
   speaker.configure(config);
   const listen = new Listen({ capri, panel, host, brain, chat, speaker });
+  // reminders, sums, searches, your clipboard (skills.js): said or typed
+  const skills = new Skills({ host, brain, capri, panel, voice });
+  chat.skills = skills;
+  skills.onRing = (line) => {
+    if (speaker.enabled || speaker.all) speaker.say(line);
+  };
+  skills.load(config.reminders);
   // her answer out loud a sentence at a time, as it comes in
   chat.onSentence = (sentence, { voice }) => {
     if ((voice && speaker.enabled) || speaker.all) speaker.say(sentence);

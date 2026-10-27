@@ -7,6 +7,7 @@
 
 import { pick, fmt } from './util.js';
 import { ASSISTANT_NAMES } from './lines.js';
+import { parse as parseSkill } from './skills.js';
 
 const REMEMBER = 20; // messages she has in mind when answering
 const KEEP = 60;     // messages she remembers across restarts (memory.json)
@@ -81,6 +82,7 @@ export class Chat {
     // (sentence, { voice }) => void: her answer a sentence at a time, as it comes in, for speak.js to
     // start saying it before the model is done
     this.onSentence = null;
+    this.skills = null;  // skills.js: reminders, sums, searches (app.js)
     this.voiced = false; // this answer is for saying out loud (you said yours)
     this.sinceLearn = 0; // your messages since she last looked back at what she learned
     this.learning = false;
@@ -250,8 +252,28 @@ export class Chat {
     // line about it comes under her answer (Claude Code, answering her chat, does things its own way)
     const asked = this.agent ? null : this.asked(text);
     const early = asked && asked.kind !== 'close' ? this.doNow(asked) : null;
+    // a reminder, a sum, a search: done, and her line is the answer (no model needed)
+    const skill = asked?.kind === 'skill' && asked.skill.kind !== 'clipboard' && (await early);
+    if (skill) {
+      this.turn = 0;
+      this.remember({ role: 'assistant', content: skill.line });
+      this.panel.stream(skill.line, { done: true });
+      this.panel.setFace(skill.face || 'smug');
+      this.panel.setChatBusy(false);
+      this.speakOn(skill.line, true);
+      this.onAnswer?.(skill.line, { voice });
+      return;
+    }
     await Promise.race([this.appsReady, new Promise((r) => setTimeout(r, 1500))]);
     const messages = [{ role: 'system', content: this.persona() }, ...this.history.slice(-REMEMBER)];
+    // what you copied goes to the model with your question, not into her memory of the chat
+    if (asked?.skill?.kind === 'clipboard') {
+      const clip = String((await this.host.clipText().catch(() => '')) || '').trim();
+      messages[messages.length - 1] = {
+        role: 'user',
+        content: clip ? `${text}\n\n[What the user copied]\n${clip.slice(0, 6000)}` : `${text}\n\n[The user's clipboard is empty: say so.]`,
+      };
+    }
     // nothing yet after a few seconds: Ollama is still loading the model (the first answer after a start),
     // or Claude Code is at work
     const wait = this.agent ? this.t.working : this.cold ? this.t.loading : null;
@@ -305,6 +327,8 @@ export class Chat {
     if (name) return { kind: 'name', name };
     const memo = MEMO_ASK.exec(text)?.[1]?.trim();
     if (memo) return { kind: 'memo', text: memo };
+    const skill = parseSkill(text, this.brain.lang);
+    if (skill) return { kind: 'skill', skill };
     const media = MEDIA_ASK.find(([, re]) => re.test(text))?.[0];
     if (media && (count <= 5 || MUSIC_WORD.test(text))) return { kind: 'media', action: media };
     const song = SPOTIFY_ASK.exec(text)?.[1];
@@ -319,6 +343,7 @@ export class Chat {
   async doNow(asked) {
     const { t } = this;
     const custom = this.brain.custom;
+    if (asked.kind === 'skill') return this.skills?.run(asked.skill) ?? null;
     if (asked.kind === 'name') {
       custom.userName = asked.name; // her answer, being written now, already knows it
       this.host.setConfig({ userName: asked.name });

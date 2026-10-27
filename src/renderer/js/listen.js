@@ -174,6 +174,12 @@ export class Listen {
     }
     capri.wake();
     this.lastHeard = text;
+    // a reminder, a sum, a search first: "remind me to check the report" isn't her "report"
+    const asked = chat.asked(text);
+    if (asked?.kind === 'skill') {
+      const done = await chat.doNow(asked);
+      if (done) return this.say(done.line, done.face);
+    }
     const own = this.own(text);
     if (own) return this.doOwn(own);
     // what her chat would do right away (music, the volume, an app, your name…): she does it now,
