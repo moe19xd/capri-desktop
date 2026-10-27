@@ -223,8 +223,9 @@ async function boot() {
   const speaker = new Speaker({ capri, host });
   speaker.configure(config);
   const listen = new Listen({ capri, panel, host, brain, chat, speaker });
-  chat.onAnswer = (answer, { voice }) => {
-    if ((voice && speaker.enabled) || speaker.all) speaker.say(answer);
+  // her answer out loud a sentence at a time, as it comes in
+  chat.onSentence = (sentence, { voice }) => {
+    if ((voice && speaker.enabled) || speaker.all) speaker.say(sentence);
   };
   // all her lines out loud, if you asked for that (her menu › Voice); her chat's answers go through onAnswer
   const sayLine = panel.say.bind(panel);

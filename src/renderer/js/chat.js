@@ -72,7 +72,12 @@ export class Chat {
     this.appsReady = Promise.resolve();
     this.onSetup = null; // (status) => void: she can't answer yet (app.js hands it to setup.js)
     this.onBetterModel = null; // () => void: a bigger model than the tiny one she's on (setup.js)
-    this.onAnswer = null; // (answer, { voice }) => void: her whole answer, once in (speak.js says it out loud)
+    this.onAnswer = null; // (answer, { voice }) => void: her whole answer, once in
+    // (sentence, { voice }) => void: her answer a sentence at a time, as it comes in, for speak.js to
+    // start saying it before the model is done
+    this.onSentence = null;
+    this.voiced = false; // this answer is for saying out loud (you said yours)
+    this.spoken = 0;     // how much of it has gone to her voice
     host.onChatDelta(({ id, text }) => this.onDelta(id, text));
   }
 
@@ -173,6 +178,8 @@ export class Chat {
     const id = Date.now();
     this.turn = id;
     this.answer = '';
+    this.voiced = voice;
+    this.spoken = 0;
     this.history.push({ role: 'user', content: text });
     this.panel.setChatBusy(true);
     this.panel.setActions([]); // a close button she offered before goes with a new message
@@ -211,6 +218,7 @@ export class Chat {
     this.panel.stream(answer, { done: true });
     this.panel.setFace(mood(answer));
     this.panel.setChatBusy(false);
+    this.speakOn(res.text, true);
     this.onAnswer?.(answer, { voice });
     if (!this.agent) this.after(res.text, answer, asked, early, text);
     this.listApps(); // fresh for the next message
@@ -445,6 +453,22 @@ export class Chat {
     this.answer += piece;
     this.panel.stream(clean(this.answer));
     this.voice.play('blip'); // her blips as the words come in
+    this.speakOn(this.answer);
+  }
+
+  // The sentences of her answer finished since last time, to her voice (all the rest when `done`).
+  speakOn(raw, done = false) {
+    if (!this.onSentence) return;
+    const text = sayable(raw);
+    let end = text.length;
+    if (!done) {
+      end = 0;
+      for (const m of text.matchAll(SENTENCE_END)) end = m.index + m[0].length;
+    }
+    if (end <= this.spoken) return;
+    const sentence = text.slice(this.spoken, end).trim();
+    this.spoken = end;
+    if (sentence) this.onSentence(sentence, { voice: this.voiced });
   }
 
   // Who she is, how she talks, and what's going on right now.
@@ -470,6 +494,18 @@ export class Chat {
       lang.last,
     ].join('\n');
   }
+}
+
+// Where a sentence ends, as her answer streams in
+const SENTENCE_END = /[.!?…]+["'”’)\]]*\s+/g;
+
+// What of an answer, maybe half written, can be said: no reasoning block (even one still open), no
+// tags (even one still being written), no markdown marks.
+function sayable(raw) {
+  return String(raw)
+    .replace(/<think>[\s\S]*?(<\/think>|$)/g, '')
+    .replace(/\[\[[^\]]*(\]\]|$)/g, '')
+    .replace(/[*_`#]+/g, '');
 }
 
 // The model's answer as she'd say it: no reasoning block, no markdown marks.
