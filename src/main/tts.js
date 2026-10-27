@@ -8,9 +8,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { once } = require('node:events');
-const { execFile } = require('node:child_process');
 const { net } = require('electron');
 const memory = require('./memory');
+const { unpack } = require('./unpack');
 
 // Female voices, by language: the first one fetched of each is the one she starts with.
 // Kokoro's are speakers (sid) of one model; accent/espeak: how it reads the words.
@@ -65,12 +65,7 @@ function current(lang, picked) {
   return mine.find((v) => v.id === picked) || mine[0] || null;
 }
 
-function untar(archive, into) {
-  return new Promise((resolve, reject) => {
-    execFile('tar', ['-xjf', archive, '-C', into], { windowsHide: true, timeout: 10 * 60 * 1000 },
-      (err, _out, stderr) => (err ? reject(new Error(String(stderr || err.message).trim().slice(0, 200))) : resolve()));
-  });
-}
+const untar = (archive, into, onProgress) => unpack(archive, into, { onProgress });
 
 // Fetches and unpacks a voice; onProgress({ done, total, unpacking }).
 async function download(id, onProgress, signal) {
@@ -93,8 +88,8 @@ async function download(id, onProgress, signal) {
     }
     await new Promise((resolve, reject) => out.end((err) => (err ? reject(err) : resolve())));
     fs.renameSync(part, archive);
-    onProgress?.({ done, total, unpacking: true });
-    await untar(archive, dir);
+    onProgress?.({ done, total, unpacking: 0 });
+    await untar(archive, dir, (unpacking) => onProgress?.({ done, total, unpacking }));
     if (!installed(id)) throw new Error('the archive had no voice in it');
   } catch (err) {
     out.destroy();

@@ -8,9 +8,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { once } = require('node:events');
-const { execFile } = require('node:child_process');
 const { net } = require('electron');
 const memory = require('./memory');
+const { unpack } = require('./unpack');
 
 const NAME = 'sherpa-onnx-whisper-base';
 const FILES = ['base-encoder.int8.onnx', 'base-decoder.int8.onnx', 'base-tokens.txt'];
@@ -33,13 +33,8 @@ function installed() {
 
 const status = () => ({ installed: installed(), expected: SIZE });
 
-// Windows 10 and 11 come with tar (bsdtar), which reads .tar.bz2: only the int8 models come out.
-function untar(archive, into) {
-  return new Promise((resolve, reject) => {
-    execFile('tar', ['-xjf', archive, '-C', into, ...FILES.map((f) => `${NAME}/${f}`)], { windowsHide: true, timeout: 10 * 60 * 1000 },
-      (err, _out, stderr) => (err ? reject(new Error(String(stderr || err.message).trim().slice(0, 200))) : resolve()));
-  });
-}
+// only the int8 models come out of it (the full-size ones stay packed, and go with the archive)
+const untar = (archive, into, onProgress) => unpack(archive, into, { keep: (p) => FILES.some((f) => p.endsWith(`${NAME}/${f}`)), onProgress });
 
 // Fetches and unpacks it; onProgress({ done, total, unpacking }).
 async function download(onProgress, signal) {
@@ -59,8 +54,8 @@ async function download(onProgress, signal) {
     }
     await new Promise((resolve, reject) => out.end((err) => (err ? reject(err) : resolve())));
     fs.renameSync(part, archive);
-    onProgress?.({ done, total, unpacking: true });
-    await untar(archive, dir);
+    onProgress?.({ done, total, unpacking: 0 });
+    await untar(archive, dir, (unpacking) => onProgress?.({ done, total, unpacking }));
     if (!installed()) throw new Error('the archive had no Whisper model in it');
   } catch (err) {
     out.destroy();

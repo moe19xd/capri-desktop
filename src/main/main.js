@@ -759,9 +759,9 @@ function registerIpc() {
     try {
       for (const part of parts) {
         await part.get(({ done, unpacking }) => {
-          if (!unpacking && Date.now() - last < 150) return;
+          if (Date.now() - last < 200) return;
           last = Date.now();
-          overlay?.webContents.send('voice:progress', { done: before + done, total, unpacking: Boolean(unpacking) });
+          overlay?.webContents.send('voice:progress', { done: before + done, total, unpacking });
         }, voiceFetch.signal);
         before += part.size;
       }
@@ -796,9 +796,9 @@ function registerIpc() {
     let last = 0;
     try {
       await tts.download(id, ({ done, total, unpacking }) => {
-        if (!unpacking && Date.now() - last < 150) return;
+        if (Date.now() - last < 200) return;
         last = Date.now();
-        overlay?.webContents.send('voice:progress', { done, total, unpacking: Boolean(unpacking) });
+        overlay?.webContents.send('voice:progress', { done, total, unpacking });
       }, voiceFetch.signal);
       updateConfig({ ttsVoice: id, voiceEngine: 'auto' });
       tts.warm(id);

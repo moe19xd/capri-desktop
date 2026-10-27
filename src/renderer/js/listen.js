@@ -361,9 +361,13 @@ export class Listen {
       onAction: () => host.cancelVoice(),
       hold: null,
     });
+    // unpacking: how far into the archive (0..1), once it's downloaded (a minute or so for the big ones)
     const off = host.onVoiceProgress(({ done, total, unpacking }) => {
-      panel.setProgress(total ? done / total : 0);
-      panel.setQuote(unpacking ? s.unpacking : fmt(s.progress, { done: Math.round(done / 1e6), total: Math.round(total / 1e6) }));
+      const unpackingNow = typeof unpacking === 'number';
+      panel.setProgress(unpackingNow ? unpacking : total ? done / total : 0);
+      panel.setQuote(unpackingNow
+        ? `${s.unpacking} ${Math.round(unpacking * 100)}%`
+        : fmt(s.progress, { done: Math.round(done / 1e6), total: Math.round(total / 1e6) }));
     });
     const res = await run();
     off();
