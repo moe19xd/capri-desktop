@@ -13,6 +13,7 @@ import { Speaker } from './speak.js';
 import { Listen } from './listen.js';
 import { Fullscreen } from './fullscreen.js';
 import { Skills } from './skills.js';
+import { Updates } from './update.js';
 import { linesFor } from './lines.js';
 import { pick, fmt, reducedMotion } from './util.js';
 
@@ -214,6 +215,8 @@ async function boot() {
   // Her guide (guide.js): her welcome on first launch, and "How does it work?" in her menu,
   // where she takes you to things and points at them.
   const guide = new Guide({ capri, panel, voice, host, brain });
+  // a newer her (update.js)
+  const updates = new Updates({ guide, panel, host, brain, capri });
   // Talking to her (chat.js): "Talk to her" in her menu, or the button when you click her idle.
   const chat = new Chat({ capri, panel, voice, host, brain });
   brain.onTalk = () => chat.start();
@@ -449,6 +452,15 @@ async function boot() {
         break;
       case 'voicePtt': // Ctrl+Alt+V: what you say next is for her
         listen.pushToTalk();
+        break;
+      case 'updateAvailable': // main.js found a newer installer
+        updates.offer(cmd.version);
+        break;
+      case 'updateCheck': // her menu › Updates › Check for updates
+        updates.check();
+        break;
+      case 'updateToken': // her menu › Updates › GitHub token
+        updates.token();
         break;
       case 'voiceTest': // her menu › Voice: a voice, pitch or glitches just picked
         listen.test();

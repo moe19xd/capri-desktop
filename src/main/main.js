@@ -20,6 +20,7 @@ const launch = require('./launch');
 const ears = require('./ears');
 const whisper = require('./whisper');
 const tts = require('./tts');
+const updater = require('./updater');
 const { ASSISTANTS, assistant } = require('./assistants');
 const activeAssistant = () => assistant(config.load().assistant); // Claude Code or Codex
 const activeHooks = () => activeAssistant().hooks;
@@ -458,6 +459,15 @@ function rebuildTray() {
       ...(hookState.installed ? [{ label: t.hooksRemove, click: () => runHooks('uninstall') }] : []),
     ] : []),
     { type: 'separator' },
+    ...(updater.supported() ? [{
+      label: t.updates,
+      submenu: [
+        { label: `Capri v${app.getVersion()}`, enabled: false },
+        { label: t.updateCheck, click: () => sendCommand('updateCheck') },
+        { label: t.updateAuto, type: 'checkbox', checked: cfg.autoUpdate !== false, click: (item) => updateConfig({ autoUpdate: item.checked }) },
+        { label: t.updateToken, click: () => sendCommand('updateToken') },
+      ],
+    }] : []),
     { label: t.quit, click: () => app.quit() },
   ]);
   tray.setContextMenu(menu);
@@ -827,6 +837,42 @@ function registerIpc() {
   ipcMain.on('voice:arm', (_e, ms) => ears.arm(ms));
   // what you copied, when you ask her about it (skills.js): read then, never kept
   ipcMain.handle('clip:read', () => clipboard.readText().slice(0, 20000));
+  // her updates (updater.js): looking, the token for her private repo, fetching and installing
+  const updateToken = () => setup.openKeys({ t: config.load().updateToken }).t;
+  ipcMain.handle('update:check', async () => {
+    try {
+      return { ok: true, update: await updater.check(updateToken()) };
+    } catch (err) {
+      return { ok: false, code: err.code || null, error: err.message };
+    }
+  });
+  ipcMain.handle('update:token', async (_e, token) => {
+    const clean = String(token || '').trim();
+    try {
+      const update = await updater.check(clean);
+      config.save({ updateToken: setup.sealKey(clean) });
+      return { ok: true, update };
+    } catch (err) {
+      return { ok: false, code: err.code || null, error: err.message };
+    }
+  });
+  ipcMain.on('update:tokenPage', () => shell.openExternal(updater.TOKEN_PAGE));
+  ipcMain.handle('update:install', async () => {
+    try {
+      const update = await updater.check(updateToken());
+      if (!update) return { ok: false, error: 'nothing newer' };
+      let last = 0;
+      const file = await updater.download(updateToken(), update.asset, ({ done, total }) => {
+        if (Date.now() - last < 200) return;
+        last = Date.now();
+        overlay?.webContents.send('update:progress', { done, total });
+      });
+      updater.install(file);
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
   ipcMain.handle('sounds:list', () => {
     try {
       return fs.readdirSync(userSoundsDir())
@@ -957,6 +1003,21 @@ function main() {
     whisper.init(ears.dir());
     tts.init(ears.dir());
     setTimeout(applyVoice, 4000); // after her intro: loading the model takes the CPU a moment
+    // a newer her: looked for a little after she starts, then every few hours (offered once a version)
+    if (updater.supported()) {
+      let offered = null;
+      const look = async () => {
+        const cfg = config.load();
+        if (cfg.autoUpdate === false || !cfg.updateToken) return;
+        const update = await updater.check(setup.openKeys({ t: cfg.updateToken }).t).catch(() => null);
+        if (update && update.version !== offered) {
+          offered = update.version;
+          sendCommand('updateAvailable', { version: update.version });
+        }
+      };
+      setTimeout(look, 30000);
+      setInterval(look, 6 * 3600 * 1000);
+    }
     llm.restoreClaude(readMemory().claude);
     refreshModels(); // for her menu's model list
     setTimeout(() => launch.launchables().catch(() => {}), 20000); // what she can open, before you ask

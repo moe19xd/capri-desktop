@@ -16,7 +16,7 @@ const TRAY = {
     soundsDir: 'Ouvrir le dossier des sons perso', screen: 'Écran', wander: 'Se balader quand rien ne se passe',
     hideFullscreen: 'Se cacher pendant les jeux et vidéos plein écran', possess: 'Posséder mes fenêtres', lang: 'Langue', auto: 'Automatique (système)', startup: 'Lancer au démarrage',
     hooksOn: 'Hooks Claude Code : installés', hooksOff: 'Installer les hooks Claude Code',
-    hooksRemove: 'Retirer les hooks Claude Code', learn: 'Se souvenir de moi', forget: 'Oublier nos conversations', quit: 'Quitter',
+    hooksRemove: 'Retirer les hooks Claude Code', learn: 'Se souvenir de moi', forget: 'Oublier nos conversations', updates: 'Mises à jour', updateCheck: 'Chercher une mise à jour', updateAuto: 'Chercher toute seule', updateToken: 'Jeton GitHub…', quit: 'Quitter',
     voice: 'Voix', voiceListen: 'M’écouter (« Capri, … »)', voiceWho: 'Sa voix', voiceFetch: 'télécharger', voiceWindows: 'Voix de Windows', voicePitch: 'Hauteur', voicePitchNatural: 'Naturelle', voicePitchHigher: 'Plus aiguë', voicePitchHighest: 'Très aiguë', voiceGlitch: 'Glitchs', voiceGlitchOff: 'Aucun', voiceGlitchLight: 'Légers', voiceGlitchStrong: 'Forts', voiceTest: 'Tester sa voix', voiceBargeIn: 'La couper à la voix (avec un casque)', voiceWhisper: 'Meilleure écoute (Whisper)', voicePtt: 'Lui parler maintenant', voiceAnswer: 'Répondre à voix haute', voiceAll: 'Lire toutes ses répliques à voix haute', voiceFolder: 'Ouvrir le dossier des voix',
   },
   en: {
@@ -31,7 +31,7 @@ const TRAY = {
     soundsDir: 'Open custom sounds folder', screen: 'Screen', wander: 'Wander around when idle',
     hideFullscreen: 'Hide during full-screen games and videos', possess: 'Possess my windows', lang: 'Language', auto: 'Automatic (system)', startup: 'Start with Windows',
     hooksOn: 'Claude Code hooks: installed', hooksOff: 'Install Claude Code hooks',
-    hooksRemove: 'Remove Claude Code hooks', learn: 'Remember things about me', forget: 'Forget our conversations', quit: 'Quit',
+    hooksRemove: 'Remove Claude Code hooks', learn: 'Remember things about me', forget: 'Forget our conversations', updates: 'Updates', updateCheck: 'Check for updates', updateAuto: 'Check automatically', updateToken: 'GitHub token…', quit: 'Quit',
     voice: 'Voice', voiceListen: 'Listen to me (“Capri, …”)', voiceWho: 'Her voice', voiceFetch: 'download', voiceWindows: 'Windows voice', voicePitch: 'Pitch', voicePitchNatural: 'Natural', voicePitchHigher: 'Higher', voicePitchHighest: 'Highest', voiceGlitch: 'Glitches', voiceGlitchOff: 'Off', voiceGlitchLight: 'Light', voiceGlitchStrong: 'Strong', voiceTest: 'Test her voice', voiceBargeIn: 'Cut in by voice (with a headset)', voiceWhisper: 'Better hearing (Whisper)', voicePtt: 'Talk to her now', voiceAnswer: 'Answer out loud', voiceAll: 'Read all her lines out loud', voiceFolder: 'Open voice models folder',
   },
   es: {
@@ -46,7 +46,7 @@ const TRAY = {
     soundsDir: 'Abrir la carpeta de sonidos propios', screen: 'Pantalla', wander: 'Pasear cuando no pasa nada',
     hideFullscreen: 'Ocultarse en juegos y vídeos a pantalla completa', possess: 'Poseer mis ventanas', lang: 'Idioma', auto: 'Automático (sistema)', startup: 'Iniciar con Windows',
     hooksOn: 'Hooks de Claude Code: instalados', hooksOff: 'Instalar los hooks de Claude Code',
-    hooksRemove: 'Quitar los hooks de Claude Code', learn: 'Recordar cosas sobre mí', forget: 'Olvidar nuestras conversaciones', quit: 'Salir',
+    hooksRemove: 'Quitar los hooks de Claude Code', learn: 'Recordar cosas sobre mí', forget: 'Olvidar nuestras conversaciones', updates: 'Actualizaciones', updateCheck: 'Buscar actualizaciones', updateAuto: 'Buscar automáticamente', updateToken: 'Token de GitHub…', quit: 'Salir',
     voice: 'Voz', voiceListen: 'Escucharme («Capri, …»)', voiceWho: 'Su voz', voiceFetch: 'descargar', voiceWindows: 'Voz de Windows', voicePitch: 'Tono', voicePitchNatural: 'Natural', voicePitchHigher: 'Más agudo', voicePitchHighest: 'Muy agudo', voiceGlitch: 'Glitches', voiceGlitchOff: 'Ninguno', voiceGlitchLight: 'Suaves', voiceGlitchStrong: 'Fuertes', voiceTest: 'Probar su voz', voiceBargeIn: 'Interrumpirla con la voz (con auriculares)', voiceWhisper: 'Mejor oído (Whisper)', voicePtt: 'Hablarle ahora', voiceAnswer: 'Responder en voz alta', voiceAll: 'Leer todas sus frases en voz alta', voiceFolder: 'Abrir la carpeta de voces',
   },
   pt: {
@@ -61,7 +61,7 @@ const TRAY = {
     soundsDir: 'Abrir a pasta de sons personalizados', screen: 'Tela', wander: 'Passear quando nada acontece',
     hideFullscreen: 'Sumir em jogos e vídeos em tela cheia', possess: 'Possuir minhas janelas', lang: 'Idioma', auto: 'Automático (sistema)', startup: 'Iniciar com o Windows',
     hooksOn: 'Hooks do Claude Code: instalados', hooksOff: 'Instalar os hooks do Claude Code',
-    hooksRemove: 'Remover os hooks do Claude Code', learn: 'Lembrar de coisas sobre mim', forget: 'Esquecer nossas conversas', quit: 'Sair',
+    hooksRemove: 'Remover os hooks do Claude Code', learn: 'Lembrar de coisas sobre mim', forget: 'Esquecer nossas conversas', updates: 'Atualizações', updateCheck: 'Procurar atualizações', updateAuto: 'Procurar sozinha', updateToken: 'Token do GitHub…', quit: 'Sair',
     voice: 'Voz', voiceListen: 'Me ouvir (“Capri, …”)', voiceWho: 'A voz dela', voiceFetch: 'baixar', voiceWindows: 'Voz do Windows', voicePitch: 'Tom', voicePitchNatural: 'Natural', voicePitchHigher: 'Mais agudo', voicePitchHighest: 'Bem agudo', voiceGlitch: 'Glitches', voiceGlitchOff: 'Nenhum', voiceGlitchLight: 'Leves', voiceGlitchStrong: 'Fortes', voiceTest: 'Testar a voz dela', voiceBargeIn: 'Interromper com a voz (com fone)', voiceWhisper: 'Audição melhor (Whisper)', voicePtt: 'Falar com ela agora', voiceAnswer: 'Responder em voz alta', voiceAll: 'Ler todas as falas dela em voz alta', voiceFolder: 'Abrir a pasta de vozes',
   },
   ru: {
@@ -76,7 +76,7 @@ const TRAY = {
     soundsDir: 'Открыть папку своих звуков', screen: 'Экран', wander: 'Гулять, когда ничего не происходит',
     hideFullscreen: 'Прятаться в полноэкранных играх и видео', possess: 'Вселяться в мои окна', lang: 'Язык', auto: 'Автоматически (системный)', startup: 'Запускать вместе с Windows',
     hooksOn: 'Хуки Claude Code: установлены', hooksOff: 'Установить хуки Claude Code',
-    hooksRemove: 'Удалить хуки Claude Code', learn: 'Запоминать обо мне', forget: 'Забыть наши разговоры', quit: 'Выйти',
+    hooksRemove: 'Удалить хуки Claude Code', learn: 'Запоминать обо мне', forget: 'Забыть наши разговоры', updates: 'Обновления', updateCheck: 'Проверить обновления', updateAuto: 'Проверять автоматически', updateToken: 'Токен GitHub…', quit: 'Выйти',
     voice: 'Голос', voiceListen: 'Слушать меня («Капри, …»)', voiceWho: 'Её голос', voiceFetch: 'скачать', voiceWindows: 'Голос Windows', voicePitch: 'Высота', voicePitchNatural: 'Обычная', voicePitchHigher: 'Выше', voicePitchHighest: 'Очень высокая', voiceGlitch: 'Глитчи', voiceGlitchOff: 'Нет', voiceGlitchLight: 'Лёгкие', voiceGlitchStrong: 'Сильные', voiceTest: 'Проверить голос', voiceBargeIn: 'Перебивать голосом (в наушниках)', voiceWhisper: 'Лучший слух (Whisper)', voicePtt: 'Сказать ей сейчас', voiceAnswer: 'Отвечать вслух', voiceAll: 'Читать все её реплики вслух', voiceFolder: 'Открыть папку голосов',
   },
 };

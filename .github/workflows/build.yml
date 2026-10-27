@@ -35,6 +35,11 @@ jobs:
           npm run test:chat
           npm run test:skills
 
+      # each build its own version (0.5.<run>), so an installed her can tell a newer one
+      - name: Version
+        shell: bash
+        run: npm version "0.5.${{ github.run_number }}" --no-git-tag-version --allow-same-version
+
       - name: Installer
         run: npm run dist -- --publish never
         env:
