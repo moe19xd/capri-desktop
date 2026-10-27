@@ -77,15 +77,23 @@ function control(msg) {
   if (win && !win.isDestroyed()) win.webContents.send('ears:control', msg);
 }
 
+let withWhisper = false; // Whisper makes out the sentences: her ears only need to catch her name
+
 function begin() {
-  control({ action: 'start', modelUrl: `capri://app/voice-models/${fileName(lang)}`, words: WAKE[lang] || ['capri'] });
+  control({
+    action: 'start',
+    modelUrl: `capri://app/voice-models/${fileName(lang)}`,
+    words: WAKE[lang] || ['capri'],
+    sentences: !withWhisper, // without Whisper, her small model makes out the sentences itself
+  });
 }
 
 // Starts listening in that language (again, if it changed); onEvent(msg) gets what the page says.
-function start(language, onEvent, { dev = false } = {}) {
+function start(language, onEvent, { dev = false, whisper = false } = {}) {
   handler = onEvent;
-  const changed = language !== lang;
+  const changed = language !== lang || whisper !== withWhisper;
   lang = MODELS[language] ? language : 'en';
+  withWhisper = whisper;
   if (win && !win.isDestroyed()) {
     if (changed) begin();
     return;

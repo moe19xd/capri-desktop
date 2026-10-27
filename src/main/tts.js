@@ -10,6 +10,7 @@ const path = require('node:path');
 const { once } = require('node:events');
 const { execFile } = require('node:child_process');
 const { net } = require('electron');
+const memory = require('./memory');
 
 // Female voices, by language: the first one fetched of each is the one she starts with.
 // Kokoro's are speakers (sid) of one model; accent/espeak: how it reads the words.
@@ -105,6 +106,8 @@ async function download(id, onProgress, signal) {
 }
 
 let engine = null; // { key, promise }: one model loaded at a time
+// 70 to 250 MB loaded: let go of it when she's been quiet a few minutes
+const used = memory.idle(memory.IDLE_MS, () => { engine = null; });
 const THREADS = Math.max(2, Math.min(6, require('node:os').cpus().length - 2));
 
 // What the model needs to read this voice's words: Kokoro reads English with its lexicons (one
@@ -132,6 +135,7 @@ function modelConfig(voice) {
 }
 
 function load(id) {
+  used();
   const voice = find(id);
   const { key, config } = modelConfig(voice);
   if (engine?.key === key) return engine.promise;
@@ -157,7 +161,9 @@ function warm(id) {
 }
 
 function unload() {
+  if (!engine) return;
   engine = null;
+  memory.release();
 }
 
 function init(voiceDir) {

@@ -7,7 +7,6 @@
 //
 //   { type: 'ready' }                    listening
 //   { type: 'wake' }                     her name, just now, in what you're saying
-//   { type: 'partial', text }            what you're saying, so far
 //   { type: 'final', text, wake, audio } what you said (wake: her name was in it); audio: the sound
 //                                        of it (16 kHz) when it's for her, for Whisper (main/whisper.js)
 //   { type: 'error', error }
@@ -51,7 +50,25 @@ function take() {
 
 const mentions = (text) => wakeWords.some((w) => ` ${text} `.includes(` ${w} `));
 
-async function start({ modelUrl, words }) {
+// Silence costs nothing: sound only goes to the recognizers when it's louder than the room
+// (its noise floor, followed as it changes), and for a moment after, so they hear the sentence end.
+const HANGOVER_MS = 1300;
+let floor = 0;
+let loudAt = 0;
+let quietChunk = null; // the chunk just before a sound starts: its first syllable is often in it
+let spoke = false;     // something louder than the room since the last sentence ended
+let open = false;      // the recognizers are being fed (a sentence may be going on)
+
+function loud(samples) {
+  let sum = 0;
+  for (let i = 0; i < samples.length; i++) sum += samples[i] * samples[i];
+  const rms = Math.sqrt(sum / samples.length);
+  // the floor sinks fast to quiet and creeps up slowly, so speech doesn't become "the room"
+  floor = floor === 0 ? rms : rms < floor ? floor * 0.7 + rms * 0.3 : floor * 1.02;
+  return rms > Math.max(0.006, floor * 2.2);
+}
+
+async function start({ modelUrl, words, sentences = true }) {
   stop();
   wakeWords = words;
   try {
@@ -74,48 +91,74 @@ async function start({ modelUrl, words }) {
   }
   // 16 kHz is what the model works at: less to send it, nothing lost
   const ctx = new AudioContext({ sampleRate: RATE });
-  full = new model.KaldiRecognizer(ctx.sampleRate);
+  // her name, always; whole sentences only without Whisper (it makes them out far better, from
+  // the sound of them: then this one recognizer also says when a sentence ends)
   wake = new model.KaldiRecognizer(ctx.sampleRate, JSON.stringify([...words, '[unk]']));
+  full = sentences ? new model.KaldiRecognizer(ctx.sampleRate) : null;
 
-  wake.on('partialresult', (m) => {
-    if (!wakeHeard && mentions(m.result.partial)) {
+  const named = (text) => {
+    if (!wakeHeard && mentions(text)) {
       wakeHeard = true;
       link.emit({ type: 'wake' });
     }
-  });
+  };
+  // A sentence just ended: what was said (its text, without Whisper), and its sound when it's
+  // for her. Anything else is dropped right here.
+  const ended = (text) => {
+    const heard = wakeHeard || mentions(text);
+    wakeHeard = false;
+    const audio = take();
+    // nothing said since the last one (a recognizer closing a sentence already closed): Whisper
+    // would make words up out of the silence
+    if (!spoke) return;
+    spoke = false;
+    // (only a real sentence's sound: what was kept is emptied while she talks)
+    const forHer = (heard || Date.now() < armedUntil) && audio.length >= RATE / 4;
+    if (forHer) link.emit({ type: 'final', text, wake: heard, audio });
+    else if (text) link.emit({ type: 'final', text, wake: heard });
+  };
+
+  wake.on('partialresult', (m) => named(m.result.partial));
   wake.on('result', (m) => {
-    if (!wakeHeard && mentions(m.result.text)) {
-      wakeHeard = true;
-      link.emit({ type: 'wake' });
-    }
+    named(m.result.text);
+    if (!full) ended('');
   });
-  full.on('partialresult', (m) => {
-    if (m.result.partial) link.emit({ type: 'partial', text: m.result.partial });
-  });
-  full.on('result', (m) => {
-    const text = (m.result.text || '').trim();
+  if (full) {
     // the name recognizer often settles a beat after the sentence one: give it that beat
-    setTimeout(() => {
-      const heard = wakeHeard || mentions(text);
-      wakeHeard = false;
-      const audio = take();
-      if (!text) return;
-      // the sound goes along only when it's for her: anything else is dropped right here
-      const forHer = heard || Date.now() < armedUntil;
-      link.emit({ type: 'final', text, wake: heard, ...(forHer && { audio }) });
-    }, 250);
-  });
+    full.on('result', (m) => setTimeout(() => ended((m.result.text || '').trim()), 250));
+  }
 
+  const feed = (buffer) => {
+    try {
+      full?.acceptWaveformFloat(buffer, RATE);
+      wake.acceptWaveformFloat(buffer, RATE);
+    } catch {
+      // a chunk lost, the next one will do
+    }
+  };
   const source = ctx.createMediaStreamSource(stream);
   const node = ctx.createScriptProcessor(4096, 1, 1);
   node.onaudioprocess = (e) => {
     if (paused) return;
-    keep(e.inputBuffer.getChannelData(0).slice());
-    try {
-      full.acceptWaveform(e.inputBuffer);
-      wake.acceptWaveform(e.inputBuffer);
-    } catch {
-      // a chunk lost, the next one will do
+    const samples = e.inputBuffer.getChannelData(0).slice();
+    keep(samples);
+    const now = Date.now();
+    if (loud(samples)) {
+      if (!open && quietChunk) feed(quietChunk);
+      loudAt = now;
+      spoke = true;
+    }
+    if (now - loudAt <= HANGOVER_MS) {
+      feed(samples);
+      open = true;
+    } else {
+      // quiet long enough: the sentence is over, whether or not the recognizers have said so
+      if (open) {
+        full?.retrieveFinalResult();
+        wake.retrieveFinalResult();
+        open = false;
+      }
+      quietChunk = samples;
     }
   };
   // a processor only runs plugged into the output; nothing is written to it, so it stays silent
@@ -140,6 +183,11 @@ function stop() {
   wakeHeard = false;
   chunks = [];
   held = 0;
+  floor = 0;
+  loudAt = 0;
+  quietChunk = null;
+  spoke = false;
+  open = false;
 }
 
 link.onControl((msg) => {

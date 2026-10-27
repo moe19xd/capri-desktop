@@ -538,6 +538,12 @@ async function heard(msg, lang) {
   return text ? { ...rest, text, alt: rest.text } : rest;
 }
 
+// her natural voice, loaded ahead of what she's about to say
+function warmVoice() {
+  const cfg = config.load();
+  if (cfg.voiceEngine !== 'windows') tts.warm(tts.current(resolveLang(cfg.lang), cfg.ttsVoice)?.id);
+}
+
 function applyVoice() {
   const cfg = config.load();
   const lang = resolveLang(cfg.lang);
@@ -546,10 +552,14 @@ function applyVoice() {
       if (DEV && msg.type !== 'partial') console.log('[voice]', JSON.stringify({ ...msg, audio: msg.audio && `${msg.audio.length ?? '?'} samples` }));
       // no microphone, or a model that won't load: her ears close, and she says why
       if (msg.type === 'error') ears.stop();
+      // her name, maybe: what she'll need next starts loading now, while you finish your sentence
+      if (msg.type === 'wake') {
+        if (useWhisper()) whisper.warm(lang);
+        warmVoice();
+      }
       const out = msg.type === 'final' ? await heard(msg, lang) : msg;
       overlay?.webContents.send('voice:event', out);
-    }, { dev: DEV });
-    if (useWhisper(cfg)) whisper.warm(lang);
+    }, { dev: DEV, whisper: useWhisper(cfg) });
   } else {
     ears.stop();
     whisper.unload();
@@ -597,6 +607,7 @@ function registerIpc() {
   });
   // her answer, streamed to the overlay piece by piece as `chat:delta`
   ipcMain.handle('chat:send', async (_e, { id, messages }) => {
+    warmVoice(); // she may say her answer out loud
     const abort = new AbortController();
     chats.set(id, abort);
     try {
@@ -930,11 +941,6 @@ function main() {
     ears.init();
     whisper.init(ears.dir());
     tts.init(ears.dir());
-    // her voice loaded ahead of her first line (a second or two)
-    setTimeout(() => {
-      const cfg = config.load();
-      if (cfg.voiceEngine !== 'windows') tts.warm(tts.current(resolveLang(cfg.lang), cfg.ttsVoice)?.id);
-    }, 6000);
     setTimeout(applyVoice, 4000); // after her intro: loading the model takes the CPU a moment
     llm.restoreClaude(readMemory().claude);
     refreshModels(); // for her menu's model list

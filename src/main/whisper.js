@@ -10,6 +10,7 @@ const path = require('node:path');
 const { once } = require('node:events');
 const { execFile } = require('node:child_process');
 const { net } = require('electron');
+const memory = require('./memory');
 
 const NAME = 'sherpa-onnx-whisper-base';
 const FILES = ['base-encoder.int8.onnx', 'base-decoder.int8.onnx', 'base-tokens.txt'];
@@ -72,9 +73,13 @@ async function download(onProgress, signal) {
 
 let recognizer = null; // { lang, promise }
 let failed = null;     // why it couldn't load, once (not retried every sentence)
+// about 300 MB loaded: let go of it after a few minutes without anything said to her (her name
+// loads it again, before the end of your sentence)
+const used = memory.idle(memory.IDLE_MS, () => { recognizer = null; });
 
 // Loads it for that language (her language: Whisper hears it best told which one).
 function load(lang) {
+  used();
   if (recognizer?.lang === lang) return recognizer.promise;
   const sherpa = require('sherpa-onnx-node');
   const d = modelDir();
@@ -94,8 +99,10 @@ function load(lang) {
 }
 
 // What was said in that sound (16 kHz samples), or null if Whisper isn't here or can't load.
+const MIN_SAMPLES = 4000; // a quarter of a second: an empty sound crashes the native side
+
 async function transcribe(samples, lang) {
-  if (!installed() || failed) return null;
+  if (!installed() || failed || !(samples?.length >= MIN_SAMPLES)) return null;
   let rec;
   try {
     rec = await load(lang);
@@ -116,7 +123,9 @@ function warm(lang) {
 }
 
 function unload() {
+  if (!recognizer) return;
   recognizer = null; // the native side is freed with it
+  memory.release();
 }
 
 function init(voiceDir) {
