@@ -63,6 +63,8 @@ export class Speaker {
     this.gen = 0;      // bumped by stop(): lines queued before it are dropped
     this.ctx = null;
     this.source = null; // what's playing of her natural voice
+    this.onIdle = null; // () => void: she's done talking and her ears are open again
+    this.bargeIn = false; // her ears stay open while she talks (a headset: she won't hear herself)
     this.synth?.getVoices(); // Chromium fills the list on its first call
   }
 
@@ -76,11 +78,17 @@ export class Speaker {
     this.engine = cfg.voiceEngine || 'auto';
     this.pitch = cfg.voicePitch || 'higher';
     this.glitch = cfg.voiceGlitch || 'light';
+    this.bargeIn = Boolean(cfg.bargeIn);
     if (this.muted) this.stop();
   }
 
   get available() {
     return true;
+  }
+
+  // she's saying something, or about to
+  get busy() {
+    return this.queue > 0;
   }
 
   // The Windows voice for her language: the one picked in her settings, else one that suits her.
@@ -172,7 +180,7 @@ export class Speaker {
 
   started() {
     clearTimeout(this.resumeTimer);
-    this.host.pauseEars(true);
+    if (!this.bargeIn) this.host.pauseEars(true);
     clearInterval(this.talking);
     this.capri.perform('talk');
     this.talking = setInterval(() => this.capri.perform('talk'), TALK_EVERY_MS);
@@ -186,7 +194,10 @@ export class Speaker {
     this.talking = 0;
     // the room's echo of her last word dies down before her ears open again
     clearTimeout(this.resumeTimer);
-    this.resumeTimer = setTimeout(() => this.host.pauseEars(false), 450);
+    this.resumeTimer = setTimeout(() => {
+      this.host.pauseEars(false);
+      this.onIdle?.();
+    }, 450);
   }
 
   stop() {

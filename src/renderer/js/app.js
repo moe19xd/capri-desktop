@@ -199,6 +199,7 @@ async function boot() {
     if (!panel.visible && Math.random() < (when === 'end' ? 0.6 : 0.4)) panel.say({ kind: 'info', line: pick(lines), hold: 3800 });
   };
   capri.onClick = () => {
+    if (speaker.busy) return listen.interrupt(); // she's talking: a click stops her
     if (panel.visible) panel.hide();
     else brain.status();
   };

@@ -162,6 +162,14 @@ export class Chat {
     capri.nextMove = capri.nextGaze = performance.now() + STAY_MS;
   }
 
+  // The answer coming in, dropped (you said something else meanwhile)
+  stopTurn() {
+    if (!this.turn) return;
+    this.host.chatStop(this.turn);
+    this.turn = 0;
+    this.panel.setChatBusy(false);
+  }
+
   close() {
     if (!this.open) return;
     this.open = false;

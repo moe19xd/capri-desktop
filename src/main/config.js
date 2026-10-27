@@ -35,6 +35,7 @@ const DEFAULTS = {
   whisper: true,     // her better hearing: Whisper makes out what you said to her, once it's fetched (whisper.js)
   speak: true,       // she answers out loud what you asked her by voice (Windows' own voices)
   speakAll: false,   // she reads all her lines out loud, not just her answers to you
+  bargeIn: false,    // her ears stay open while she talks, so you can cut in by voice (with a headset)
   voiceName: '',     // the Windows voice she talks with ('' : she picks one for her language)
   ttsVoice: '',      // her natural voice (tts.js), by id ('' : the first one fetched for her language)
   voiceEngine: 'auto', // 'auto': her natural voice when she has one, else Windows'; 'windows': Windows' always

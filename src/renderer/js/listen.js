@@ -9,6 +9,7 @@ import { pick, fmt } from './util.js';
 import { voiceFor } from './voicelines.js';
 
 const ARMED_MS = 7000;  // after her name alone (or Ctrl+Alt+V), how long she waits for the rest
+const FOLLOW_MS = 8000; // after she answered you out loud: your turn, no need for her name
 const OWN_MAX_WORDS = 7; // her own commands are short; longer, it's for her chat
 // how her name comes out of the sentence recognizer when it mishears it
 const NAMEISH = /^(capri|capris|caprice|capree|copy|cap|camp|kapri|capra|capri's|капри)$/;
@@ -52,6 +53,10 @@ export class Listen {
     this.announced = false; // she said "ears on" this run
     this.fetching = false;
     this.lastHeard = '';    // what she last heard you say to her
+    this.conversing = false; // you're talking with her out loud: after each answer, it's your turn
+    // she's done answering out loud: your turn
+    speaker.onIdle = () => this.followUp();
+    chat.onAnswer = () => { if (!speaker.busy) this.followUp(); };
     host.onVoiceEvent((msg) => this.onEvent(msg));
   }
 
@@ -106,10 +111,30 @@ export class Listen {
     if (!this.chat.open) this.panel.say({ kind: 'info', badge: this.t.badge, line: pick(this.t.listening), hold: ARMED_MS });
   }
 
-  // Ctrl+Alt+V: whatever you say next is for her
+  // Ctrl+Alt+V: whatever you say next is for her (and if she's talking, she stops)
   pushToTalk() {
+    this.interrupt();
     this.armedUntil = 0;
     this.arm();
+  }
+
+  // You cut in: she stops talking, and the answer still coming in is dropped.
+  interrupt() {
+    this.speaker.stop();
+    this.chat.stopTurn();
+  }
+
+  // After her answer to what you said out loud: she listens a few seconds more for your reply,
+  // without her name. Nothing said: the conversation's over.
+  followUp() {
+    if (!this.conversing || !this.on || this.chat.turn || this.speaker.busy) return;
+    this.armedUntil = performance.now() + FOLLOW_MS;
+    this.host.armEars(FOLLOW_MS);
+    this.capri.perform('curious', this.capri.towardCenter());
+    clearTimeout(this.followTimer);
+    this.followTimer = setTimeout(() => {
+      if (performance.now() >= this.armedUntil) this.conversing = false;
+    }, FOLLOW_MS + 200);
   }
 
   // A sentence her ears made out. wake: her name was heard in it. alt: what her small model made
@@ -141,6 +166,8 @@ export class Listen {
 
   async handle(text) {
     const { capri, chat } = this;
+    this.interrupt(); // what you just said goes first
+    this.conversing = true;
     if (capri.stowed) {
       this.host.setConfig({ visible: true });
       await capri.unstow();
@@ -223,7 +250,12 @@ export class Listen {
       case 'report':
         if (brain.report()) capri.perform('curious', capri.towardCenter());
         break;
-      case 'quiet':
+      case 'quiet': // stop talking, now (her voice stays on)
+        speaker.stop();
+        this.conversing = false;
+        capri.perform('flinch');
+        break;
+      case 'silent': // no more answers out loud
         speaker.stop();
         speaker.enabled = speaker.all = false; // her settings follow, a moment later
         host.setConfig({ speak: false, speakAll: false });

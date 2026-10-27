@@ -21,8 +21,8 @@ async function rig(lang = 'en') {
     panel: { say: () => true },
     host: { onVoiceEvent() {}, armEars() {} },
     brain: { lang },
-    chat: { open: false },
-    speaker: {},
+    chat: { open: false, turn: 0, stopTurn() {} },
+    speaker: { busy: false, stop() {} },
   });
   listen.handle = (text) => handled.push(text);
   return { listen, handled };
@@ -154,4 +154,22 @@ test('her lines in sentences, each said its own way', async () => {
   assert.ok(mood('Really?').pitch > 1);
   assert.ok(mood('Well...').speed < 1);
   assert.deepStrictEqual(mood('Okay.'), { speed: 1, pitch: 1 });
+});
+
+test('after her answer to what you said out loud, your reply needs no name; then it does again', async () => {
+  const { listen, handled } = await rig();
+  listen.on = true;
+  listen.conversing = true;
+  listen.followUp();
+  listen.heard('and tomorrow', false);
+  listen.heard('what about after', false); // one reply, then her name again
+  assert.deepStrictEqual(handled, ['and tomorrow']);
+});
+
+test('no follow-up when you only typed to her', async () => {
+  const { listen, handled } = await rig();
+  listen.on = true;
+  listen.followUp();
+  listen.heard('and tomorrow', false);
+  assert.deepStrictEqual(handled, []);
 });

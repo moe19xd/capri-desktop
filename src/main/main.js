@@ -353,6 +353,7 @@ function rebuildTray() {
         { type: 'separator' },
         { label: t.voiceAnswer, type: 'checkbox', checked: cfg.speak, click: (item) => updateConfig({ speak: item.checked }) },
         { label: t.voiceAll, type: 'checkbox', checked: cfg.speakAll, click: (item) => updateConfig({ speakAll: item.checked }) },
+        { label: t.voiceBargeIn, type: 'checkbox', checked: Boolean(cfg.bargeIn), click: (item) => updateConfig({ bargeIn: item.checked }) },
         { type: 'separator' },
         {
           label: t.voiceFolder,
