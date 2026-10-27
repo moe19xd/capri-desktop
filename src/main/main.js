@@ -69,6 +69,7 @@ function saveMemory(patch) {
 function forgetChats() {
   llm.resetClaude();
   saveMemory({ history: [], claude: null });
+  updateConfig({ learned: [] }); // what she picked up from them goes too
   sendCommand('forget');
 }
 
@@ -398,6 +399,7 @@ function rebuildTray() {
             })),
           },
         ] : []),
+        { label: t.learn, type: 'checkbox', checked: cfg.learn !== false, click: (item) => updateConfig({ learn: item.checked }) },
         { label: t.forget, click: forgetChats },
         // the key (or the address) of the one picked, pasted in her panel
         { label: t.apiKey, click: () => sendCommand('setupKey') },

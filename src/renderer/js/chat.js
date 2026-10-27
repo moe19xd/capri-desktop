@@ -53,6 +53,11 @@ const NAME_ASK = /(?:appelle[- ]moi|call me|my name is|je m['’]appelle|ll[aá]
 // "souviens-toi que…", "remember that…", "recuerda que…", "lembra que…", "запомни, что…" (said first thing)
 const MEMO_ASK = /^\s*(?:capri,?\s+|stp,?\s+|please,?\s+)?(?:souviens[- ]toi(?: que| de)?|n['’]oublie pas(?: que| de)?|remember(?: that)?|recuerda(?: que)?|lembr[ae](?:-se)?(?: que| de)?|запомни,?(?: что)?)\s+(.{3,200})/iu;
 const MEMORIES_MAX = 30;
+// what she learns about you on her own (learn()), kept apart from what you asked her to remember
+const LEARNED_MAX = 40;
+const LEARN_EVERY = 2;    // your messages between two looks back at the conversation
+const LEARN_LOOKBACK = 8; // messages she looks back at
+const DAY = (lang, d = new Date()) => d.toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 // local models this small mostly talk nonsense ("llama3.2:1b", "qwen2.5:0.5b"…)
 const TINY = /[:-](0\.5b|1b|1\.5b|135m|270m|360m)\b/i;
 
@@ -77,6 +82,8 @@ export class Chat {
     // start saying it before the model is done
     this.onSentence = null;
     this.voiced = false; // this answer is for saying out loud (you said yours)
+    this.sinceLearn = 0; // your messages since she last looked back at what she learned
+    this.learning = false;
     this.spoken = 0;     // how much of it has gone to her voice
     host.onChatDelta(({ id, text }) => this.onDelta(id, text));
   }
@@ -170,8 +177,53 @@ export class Chat {
     this.panel.setChatBusy(false);
   }
 
+  // Looking back at the last messages, in the background: anything new and lasting about you (plans
+  // and their dates, people, likes, how you've been) goes in what she knows (config.learned), with
+  // the day she learned it. Asked to the same model, never shown; on your PC unless her model isn't.
+  async learn() {
+    const custom = this.brain.custom;
+    if (this.learning || this.turn || custom.learn === false || !this.history.length) return;
+    this.learning = true;
+    this.sinceLearn = 0;
+    const known = [...(custom.memories || []), ...(custom.learned || []).map((m) => m.fact)];
+    const said = this.history.slice(-LEARN_LOOKBACK)
+      .map((m) => `${m.role === 'user' ? 'User' : 'Capri'}: ${m.content}`).join('\n');
+    const messages = [
+      {
+        role: 'system',
+        content: [
+          'You read a conversation between a user and Capri (a desktop companion) and note what\'s worth remembering about the user for later conversations.',
+          `Today is ${DAY('en')}.`,
+          'List up to 3 NEW, lasting facts about the user: plans and events with their dates (turn "Friday", "tomorrow" into real dates), people and pets and their names, likes and dislikes, projects, how they have been feeling lately.',
+          'Not small talk, not what Capri said about herself, nothing already known. One per line, starting with "- ", short, in the third person ("has a math exam on Friday 31 October"), in the language the user writes in.',
+          'If there is nothing new worth keeping, answer exactly: NONE',
+          known.length ? `Already known:\n${known.map((k) => `- ${k}`).join('\n')}` : '',
+        ].filter(Boolean).join('\n'),
+      },
+      { role: 'user', content: said },
+    ];
+    try {
+      const res = await this.host.chatSend({ id: -Date.now(), messages });
+      if (!res.ok) return;
+      const facts = clean(res.text).split('\n')
+        .map((l) => l.trim())
+        .filter((l) => /^[-*•]\s+/.test(l))
+        .map((l) => l.replace(/^[-*•]\s+/, '').slice(0, 160))
+        .filter((f) => f && !/^none\b/i.test(f) && !known.some((k) => k.toLowerCase() === f.toLowerCase()));
+      if (!facts.length) return;
+      const at = new Date().toISOString().slice(0, 10);
+      custom.learned = [...(custom.learned || []), ...facts.map((fact) => ({ at, fact }))].slice(-LEARNED_MAX);
+      this.host.setConfig({ learned: custom.learned });
+    } catch {
+      // she'll look again later
+    } finally {
+      this.learning = false;
+    }
+  }
+
   close() {
     if (!this.open) return;
+    if (this.sinceLearn) setTimeout(() => this.learn(), 500); // what was said since the last look
     this.open = false;
     if (this.turn) this.host.chatStop(this.turn);
     this.turn = 0;
@@ -188,6 +240,7 @@ export class Chat {
     this.answer = '';
     this.voiced = voice;
     this.spoken = 0;
+    this.sinceLearn += 1;
     this.history.push({ role: 'user', content: text });
     this.panel.setChatBusy(true);
     this.panel.setActions([]); // a close button she offered before goes with a new message
@@ -229,6 +282,7 @@ export class Chat {
     this.speakOn(res.text, true);
     this.onAnswer?.(answer, { voice });
     if (!this.agent) this.after(res.text, answer, asked, early, text);
+    if (!this.agent && this.sinceLearn >= LEARN_EVERY) setTimeout(() => this.learn(), 1500);
     this.listApps(); // fresh for the next message
   }
 
@@ -445,7 +499,7 @@ export class Chat {
 
   // What the user made her (custom.js): their name, how they want her, what to remember.
   personal() {
-    const { userName, persona, memories = [] } = this.brain.custom || {};
+    const { userName, persona, memories = [], learned = [] } = this.brain.custom || {};
     // small models mix the user up with the assistant she watches: said plainly
     const watched = this.brain.watching ? (this.brain.assistant === 'claude' ? 'Claude' : ASSISTANT_NAMES[this.brain.assistant]) : '';
     const notThem = watched ? ` Never call them "${watched}", that's their coding assistant.` : '';
@@ -453,6 +507,10 @@ export class Chat {
       userName ? `The user's name is ${userName}: call them that now and then.${notThem}` : notThem && `You don't know the user's name.${notThem}`,
       persona ? `How the user wants you to be, in their own words (follow it, while staying Capri): ${persona}` : '',
       memories.length ? `Things the user asked you to remember:\n${memories.map((m) => `- ${m}`).join('\n')}` : '',
+      `Today is ${DAY(this.brain.lang)}.`,
+      learned.length
+        ? `What you've picked up about the user in past conversations (the date you learned it first):\n${learned.map((m) => `- (${m.at}) ${m.fact}`).join('\n')}\nBring one up now and then when it fits, like a friend would: ask how something went once its date has passed. Not in every answer.`
+        : '',
     ].filter(Boolean);
   }
 

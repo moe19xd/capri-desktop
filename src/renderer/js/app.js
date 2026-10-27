@@ -31,7 +31,10 @@ const CUTINS = ['grin', 'laugh', 'eyes', 'many', 'look'];
 const WATCH_MS = 2000; // how often she checks the pointer still reaches her
 
 // what you made her, from the config (custom.js)
-const mine = (cfg) => ({ userName: cfg.userName || '', persona: cfg.persona || '', myLines: cfg.myLines || [], memories: cfg.memories || [] });
+const mine = (cfg) => ({
+  userName: cfg.userName || '', persona: cfg.persona || '', myLines: cfg.myLines || [], memories: cfg.memories || [],
+  learned: cfg.learned || [], learn: cfg.learn !== false,
+});
 
 async function boot() {
   const [config, image, intro, ...cutins] = await Promise.all([
