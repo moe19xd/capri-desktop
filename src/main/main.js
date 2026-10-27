@@ -404,6 +404,7 @@ function rebuildTray() {
     },
     { label: t.wander, type: 'checkbox', checked: cfg.wander, click: (item) => updateConfig({ wander: item.checked }) },
     { label: t.possess, type: 'checkbox', checked: cfg.possess, click: (item) => updateConfig({ possess: item.checked }) },
+    { label: t.hideFullscreen, type: 'checkbox', checked: cfg.hideFullscreen !== false, click: (item) => updateConfig({ hideFullscreen: item.checked }) },
     {
       label: t.rest,
       submenu: [['corner', t.restCorner], ['taskbar', t.restTaskbar]].map(([rest, label]) => ({
@@ -700,6 +701,15 @@ function registerIpc() {
   ipcMain.handle('apps:music', (_e, query) => launch.music(query).catch(() => false));
   ipcMain.handle('apps:site', (_e, address) => launch.site(address).catch(() => false));
   // typing to her: the overlay takes the keyboard while the chat is open, and gives it back after
+  // a full-screen game or video in front (fullscreen.js): her whole window goes, nothing drawn
+  ipcMain.on('overlay:away', (_e, away) => {
+    if (!overlay || overlay.isDestroyed()) return;
+    if (away) overlay.hide();
+    else {
+      overlay.showInactive();
+      rearmOverlay();
+    }
+  });
   ipcMain.on('overlay:focus', (_e, on) => {
     if (!overlay) return;
     overlay.setFocusable(Boolean(on));

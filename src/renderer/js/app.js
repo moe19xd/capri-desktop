@@ -11,6 +11,7 @@ import { Setup } from './setup.js';
 import { Custom } from './custom.js';
 import { Speaker } from './speak.js';
 import { Listen } from './listen.js';
+import { Fullscreen } from './fullscreen.js';
 import { linesFor } from './lines.js';
 import { pick, fmt, reducedMotion } from './util.js';
 
@@ -321,9 +322,13 @@ async function boot() {
   };
 
   host.onClaudeEvent((evt) => brain.handle(evt));
+  // out of the way of full-screen games and videos (fullscreen.js)
+  const fullscreen = new Fullscreen({ host });
+  fullscreen.configure(config);
   host.onWindows((data) => {
     capri.setWindows(data);
     brain.onWindows(data);
+    fullscreen.update(data, { w: innerWidth, h: innerHeight });
   });
   // the windows as they are now: the watcher only speaks again when something changes
   host.windowsNow().then((data) => data && capri.setWindows(data));
@@ -343,6 +348,7 @@ async function boot() {
   host.onConfig((cfg) => {
     voice.configure(cfg);
     speaker.configure(cfg);
+    fullscreen.configure(cfg);
     capri.wander = cfg.wander;
     capri.possessWindows = cfg.possess;
     capri.restOn = cfg.rest || 'corner';

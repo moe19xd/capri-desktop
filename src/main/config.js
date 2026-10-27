@@ -30,6 +30,7 @@ const DEFAULTS = {
   rest: 'corner',    // where she rests when nothing's going on: 'corner', or 'taskbar' (sitting on it)
   motion: 'auto',    // her animations: 'auto' (like Windows' animation effects), 'full' or 'reduced'
   motionAsked: false, // she asked once, Windows' animations being off, whether to move anyway
+  hideFullscreen: true, // out of the way while a full-screen game or video is in front (fullscreen.js)
   listen: false,     // her ears: she listens for "Capri, …" (offline, ears.js); off until you turn it on
   whisper: true,     // her better hearing: Whisper makes out what you said to her, once it's fetched (whisper.js)
   speak: true,       // she answers out loud what you asked her by voice (Windows' own voices)

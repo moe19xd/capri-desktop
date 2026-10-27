@@ -56,6 +56,7 @@ contextBridge.exposeInMainWorld('host', {
   music: (query) => ipcRenderer.invoke('apps:music', query),
   openSite: (address) => ipcRenderer.invoke('apps:site', address),
   focusOverlay: (on) => ipcRenderer.send('overlay:focus', Boolean(on)),
+  setAway: (away) => ipcRenderer.send('overlay:away', Boolean(away)),
   voiceStatus: () => ipcRenderer.invoke('voice:status'),
   getVoice: (opts) => ipcRenderer.invoke('voice:get', { light: Boolean(opts?.light) }),
   cancelVoice: () => ipcRenderer.send('voice:cancel'),
