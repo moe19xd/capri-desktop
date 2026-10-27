@@ -184,7 +184,6 @@ export class Listen {
     if (own) return this.doOwn(own);
     // what her chat would do right away (music, the volume, an app, your name…): she does it now,
     // without needing a model
-    const asked = chat.asked(text);
     if (asked && asked.kind !== 'close') {
       const done = await chat.doNow(asked);
       if (done) return this.say(done.line, done.face);
